@@ -1,6 +1,20 @@
-def main():
-    print("Hello from atualizaindicador!")
+from apscheduler.schedulers.blocking import BlockingScheduler
+from indicadores.dolar import atualizar_dolar
 
+def atualizar_indicadores():
+    atualizar_dolar()
+
+def main():
+    scheduler = BlockingScheduler()
+    scheduler.add_job( atualizar_indicadores, trigger="cron", day_of_week="mon-fri", hour="8-19", minute="0,30" )
+    print("Scheduler iniciado.")
+    print("Atualização dos indicadores a cada 30 minutos.")
+    atualizar_indicadores()
+
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        print("Scheduler encerrado.")
 
 if __name__ == "__main__":
-    main()
+    main()  
