@@ -1,7 +1,12 @@
+import os
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
 from peewee import Model, AutoField, DecimalField, DateTimeField, BooleanField
 from database.conexao import db, conectar
+
+load_dotenv()
+AWESOME_API_KEY = os.getenv("AWESOME_API_KEY")
 
 class Dolar(Model):
     cd_dolar = AutoField()
@@ -18,7 +23,8 @@ class Dolar(Model):
     @staticmethod
     def buscar():
         url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
-        resposta = requests.get(url, timeout=10)
+        headers = { "x-api-key": AWESOME_API_KEY }
+        resposta = requests.get(url, headers=headers, timeout=10)
         resposta.raise_for_status()
         return resposta.json()
 
