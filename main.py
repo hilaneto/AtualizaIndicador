@@ -1,8 +1,10 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
-from indicadores.dolar import atualizar_dolar
+from indicadores.dolar import Dolar
+from indicadores.ipca import Ipca
 
 def atualizar_indicadores():
-    atualizar_dolar()
+    Dolar.atualizar_dolar()
+    Ipca.atualizar_ipca
 
 def main():
     scheduler = BlockingScheduler()
@@ -17,4 +19,4 @@ def main():
         print("Scheduler encerrado.")
 
 if __name__ == "__main__":
-    main()  
+    main()

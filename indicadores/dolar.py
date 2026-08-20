@@ -28,25 +28,25 @@ class Dolar(Model):
         resposta.raise_for_status()
         return resposta.json()
 
-def atualizar_dolar():
-    try:
-        dados_api = Dolar.buscar()
-        dolar_api = dados_api["USDBRL"]
+    def atualizar_dolar():
+        try:
+            dados_api = Dolar.buscar()
+            dolar_api = dados_api["USDBRL"]
 
-        dados = {"valor": dolar_api["bid"],
-                 "variacao": dolar_api["pctChange"],
-                 "dt_referencia": datetime.strptime(dolar_api["create_date"],"%Y-%m-%d %H:%M:%S"),
-                 "dt_atualizacao": datetime.now(),
-                 "status": True}
+            dados = {"valor": dolar_api["bid"],
+                    "variacao": dolar_api["pctChange"],
+                    "dt_referencia": datetime.strptime(dolar_api["create_date"],"%Y-%m-%d %H:%M:%S"),
+                    "dt_atualizacao": datetime.now(),
+                    "status": True}
 
-    except Exception as erro:
-        dados = {"valor": 0,
-                 "variacao": 0,
-                 "dt_referencia": datetime.now(),
-                 "dt_atualizacao": datetime.now(),
-                 "status": False}
+        except Exception as erro:
+            dados = {"valor": 0,
+                    "variacao": 0,
+                    "dt_referencia": datetime.now(),
+                    "dt_atualizacao": datetime.now(),
+                    "status": False}
 
-        print(f"Erro ao atualizar dólar: {erro}")
+            print(f"Erro ao atualizar dólar: {erro}")
 
-    with conectar():
-        Dolar.create(**dados)
+        with conectar():
+            Dolar.create(**dados)
