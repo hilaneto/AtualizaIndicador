@@ -4,7 +4,7 @@ from indicadores.ipca import Ipca
 
 def atualizar_indicadores():
     Dolar.atualizar_dolar()
-    Ipca.atualizar_ipca
+    Ipca.atualizar_ipca()
 
 def main():
     scheduler = BlockingScheduler()
