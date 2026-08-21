@@ -1,18 +1,14 @@
-import os
 import requests
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from peewee import Model, AutoField, DecimalField, DateTimeField, BooleanField
+from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, BooleanField
 from database.conexao import db, conectar
-
-load_dotenv()
-AWESOME_API_KEY = os.getenv("AWESOME_API_KEY")
+from decimal import Decimal
 
 class Dolar(Model):
     cd_dolar = AutoField()
-    valor = DecimalField(max_digits=10, decimal_places=2)
+    valor = DecimalField(max_digits=10, decimal_places=5)
     status = BooleanField(default=True, null=False)
-    dt_referencia = DateTimeField(default=datetime.now, null=False)
+    dt_referencia = DateField(null=False)
     dt_atualizacao = DateTimeField(default=datetime.now, null=False)
 
     class Meta:
@@ -34,23 +30,18 @@ class Dolar(Model):
         resposta.raise_for_status()
         return resposta.json()
 
+    @staticmethod
     def atualizar_dolar():
-        try:
-            dados_api = Dolar.buscar()
-            dolar_api = dados_api["USDBRL"]
-
-            dados = {"valor": dolar_api["bid"],
-                    "dt_referencia": datetime.strptime(dolar_api["create_date"],"%Y-%m-%d %H:%M:%S"),
-                    "dt_atualizacao": datetime.now(),
-                    "status": True}
-
-        except Exception as erro:
-            dados = {"valor": 0,
-                    "dt_referencia": datetime.now(),
-                    "dt_atualizacao": datetime.now(),
-                    "status": False}
-
-            print(f"Erro ao atualizar dólar: {erro}")
-
+        dados = Dolar.buscar()
         with conectar():
-            Dolar.create(**dados)
+            for registro in dados:
+                dolar = {"valor": Decimal(registro["valor"]),
+                        "status": True,
+                        "dt_referencia": datetime.strptime(registro["data"],"%d/%m/%Y").date(),
+                        "dt_atualizacao": datetime.now()}
+                
+                Dolar.insert(**dolar).on_conflict(
+                conflict_target=[Dolar.dt_referencia],
+                update={Dolar.valor: dolar["valor"],
+                        Dolar.status: dolar["status"],
+                        Dolar.dt_atualizacao: dolar["dt_atualizacao"]}).execute()
