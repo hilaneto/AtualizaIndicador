@@ -18,30 +18,37 @@ class Dolar(Model):
     @staticmethod
     def buscar():
         # Datas -------------------------------------------------------
-        hoje = datetime.now()
-        data_inicial = (hoje - timedelta(days=62)).strftime("%d/%m/%Y")
-        data_final = hoje.strftime("%d/%m/%Y")
-
-        # API Banco Central ---------------------------------------------
-        url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados"
-
-        parametros = { "formato": "json", "dataInicial": data_inicial, "dataFinal": data_final }
-        resposta = requests.get(url, params=parametros, timeout=10)
+        hoje = datetime.now().strftime("%m-%d-%Y")
+        
+        url = ("https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)")
+        parametros = {"@moeda":"'USD'" , "@dataCotacao":f"'{hoje}'" , "$format":"json"}
+        resposta = requests.get( url, params=parametros, timeout=10)
         resposta.raise_for_status()
         return resposta.json()
 
     @staticmethod
+    def tratar_dados(dados_api):
+        boletins = dados_api["value"]
+        if not boletins:
+            raise ValueError("API do Banco Central não retornou cotação.")
+        ultimo = boletins[-1]
+        return {"valor": Decimal(str(ultimo["cotacaoVenda"])),
+                "status": True,
+                "dt_referencia": datetime.strptime(
+                ultimo["dataHoraCotacao"],
+                "%Y-%m-%d %H:%M:%S.%f"),
+                "dt_atualizacao": datetime.now()
+                }
+
+    @staticmethod
     def atualizar_dolar():
-        dados = Dolar.buscar()
+        dados_api = Dolar.buscar()
+        dolar = Dolar.tratar_dados(dados_api)
         with conectar():
-            for registro in dados:
-                dolar = {"valor": Decimal(registro["valor"]),
-                        "status": True,
-                        "dt_referencia": datetime.strptime(registro["data"],"%d/%m/%Y").date(),
-                        "dt_atualizacao": datetime.now()}
-                
-                Dolar.insert(**dolar).on_conflict(
-                conflict_target=[Dolar.dt_referencia],
-                update={Dolar.valor: dolar["valor"],
-                        Dolar.status: dolar["status"],
-                        Dolar.dt_atualizacao: dolar["dt_atualizacao"]}).execute()
+            (Dolar.insert(**dolar).on_conflict(
+                    conflict_target=[Dolar.dt_referencia],
+                    update={Dolar.valor: dolar["valor"],
+                            Dolar.status: dolar["status"],
+                            Dolar.dt_atualizacao: dolar["dt_atualizacao"]}).execute()
+            )
+
