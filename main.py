@@ -1,9 +1,13 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from indicadores.dolar import Dolar
+from indicadores.euro import Euro
+from indicadores.bitcoin import Bitcoin
 from indicadores.ipca import Ipca
 
 def atualizar_indicadores():
     Dolar.atualizar_dolar()
+    Euro.atualizar_euro()
+    Bitcoin.atualizar_bitcoin()
     Ipca.atualizar_ipca()
 
 def main():

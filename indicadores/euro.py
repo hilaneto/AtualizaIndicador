@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 AWESOME_API_KEY = os.getenv("AWESOME_API_KEY")
 
-class Dolar(Model):
+class Euro(Model):
     cd_moeda = AutoField()
     valor = DecimalField(max_digits=18, decimal_places=5)
     status = BooleanField(default=True, null=False)
@@ -23,7 +23,7 @@ class Dolar(Model):
 
     @staticmethod
     def buscar():
-        url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+        url = "https://economia.awesomeapi.com.br/json/last/EUR-BRL"
         headers = {"x-api-key": AWESOME_API_KEY}
         resposta = requests.get(url, headers=headers, timeout=10)
         resposta.raise_for_status()
@@ -31,23 +31,23 @@ class Dolar(Model):
 
     @staticmethod
     def tratar_dados(dados_api):
-        dolar = dados_api["USDBRL"]
-        return {"valor": Decimal(dolar["bid"]),
+        euro = dados_api["EURBRL"]
+        return {"valor": Decimal(euro["bid"]),
                 "status": True,
-                "moeda": str(dolar["code"]),
+                "moeda": str(euro["code"]),
                 "dt_referencia": datetime.strptime(
-                dolar["create_date"],
+                euro["create_date"],
                 "%Y-%m-%d %H:%M:%S"),
                 "dt_atualizacao": datetime.now()
                 }
 
     @staticmethod
-    def atualizar_dolar():
-        dados_api = Dolar.buscar()
-        dolar = Dolar.tratar_dados(dados_api)
+    def atualizar_euro():
+        dados_api = Euro.buscar()
+        euro = Euro.tratar_dados(dados_api)
         with conectar():
-            (Dolar.insert(**dolar).on_conflict(
+            (Euro.insert(**euro).on_conflict(
                     conflict_constraint="uq_tb_moeda_referencia",
-                    update={Dolar.valor: dolar["valor"],
-                            Dolar.status: dolar["status"],
-                            Dolar.dt_atualizacao: dolar["dt_atualizacao"]}).execute())
+                    update={Euro.valor: euro["valor"],
+                            Euro.status: euro["status"],
+                            Euro.dt_atualizacao: euro["dt_atualizacao"]}).execute())
