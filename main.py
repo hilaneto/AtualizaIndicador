@@ -3,12 +3,16 @@ from indicadores.dolar import Dolar
 from indicadores.euro import Euro
 from indicadores.bitcoin import Bitcoin
 from indicadores.ipca import Ipca
+from indicadores.selic import Selic
+from indicadores.salario import Salario
 
 def atualizar_indicadores():
     Dolar.atualizar_dolar()
     Euro.atualizar_euro()
     Bitcoin.atualizar_bitcoin()
     Ipca.atualizar_ipca()
+    Selic.atualizar_selic()
+    Salario.atualizar_salario()
 
 def main():
     scheduler = BlockingScheduler()

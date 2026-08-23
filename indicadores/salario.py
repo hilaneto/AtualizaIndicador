@@ -4,16 +4,16 @@ from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, Boo
 from database.conexao import db, conectar
 from decimal import Decimal
 
-class Selic(Model):
-    cd_selic = AutoField()
-    indice = DecimalField(max_digits=8, decimal_places=5)
+class Salario(Model):
+    cd_salario = AutoField()
+    vl_salario = DecimalField(max_digits=8, decimal_places=2)
     status = BooleanField(default=True, null=False)
     dt_referencia = DateField(null=False)
     dt_atualizacao = DateTimeField(default=datetime.now, null=False)
-
+   
     class Meta:
         database = db
-        table_name = "tb_selic"
+        table_name = "tb_salariominimo"
 
     @staticmethod
     def buscar():
@@ -22,7 +22,7 @@ class Selic(Model):
         data_final = hoje.strftime("%d/%m/%Y")
 
         # API Banco Central ---------------------------------------------
-        url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados"
+        url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.1619/dados"
 
         parametros = {"formato": "json", "dataInicial": data_inicial, "dataFinal": data_final}
         resposta = requests.get(url, params=parametros, timeout=10)
@@ -30,17 +30,12 @@ class Selic(Model):
         return resposta.json()
 
     @staticmethod
-    def atualizar_selic():
-        dados = Selic.buscar()
+    def atualizar_salario():
+        dados = Salario.buscar()
         with conectar():
             for registro in dados:
-                selic = {"indice": Decimal(registro["valor"]),
-                        "status": True,
-                        "dt_referencia": datetime.strptime(registro["data"],"%d/%m/%Y").date(),
-                        "dt_atualizacao": datetime.now()}
-                
-                Selic.insert(**selic).on_conflict(
-                conflict_target=[Selic.dt_referencia],
-                update={Selic.indice: selic["indice"],
-                        Selic.status: selic["status"],
-                        Selic.dt_atualizacao: selic["dt_atualizacao"]}).execute()
+                salario = {"vl_salario": Decimal(registro["valor"]),
+                           "status": True,
+                           "dt_referencia": datetime.strptime(registro["data"], "%d/%m/%Y").date(),"dt_atualizacao": datetime.now()
+                          }
+                (Salario.insert(**salario).on_conflict(conflict_target=[Salario.vl_salario],action="IGNORE").execute())
