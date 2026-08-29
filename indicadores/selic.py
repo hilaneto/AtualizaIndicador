@@ -18,7 +18,7 @@ class Selic(Model):
     @staticmethod
     def buscar():
         hoje = datetime.now()
-        data_inicial = (hoje - timedelta(days=62)).strftime("%d/%m/%Y")
+        data_inicial = (hoje - timedelta(days=600)).strftime("%d/%m/%Y")
         data_final = hoje.strftime("%d/%m/%Y")
 
         # API Banco Central ---------------------------------------------
@@ -32,15 +32,47 @@ class Selic(Model):
     @staticmethod
     def atualizar_selic():
         dados = Selic.buscar()
+
+        if not dados:
+            return
+
+        registro = dados[-1]
+
+        valor_api = Decimal(registro["valor"])
+        data_api = datetime.strptime(
+            registro["data"], "%d/%m/%Y"
+        ).date()
+
         with conectar():
-            for registro in dados:
-                selic = {"indice": Decimal(registro["valor"]),
-                        "status": True,
-                        "dt_referencia": datetime.strptime(registro["data"],"%d/%m/%Y").date(),
-                        "dt_atualizacao": datetime.now()}
-                
-                Selic.insert(**selic).on_conflict(
-                conflict_target=[Selic.dt_referencia],
-                update={Selic.indice: selic["indice"],
-                        Selic.status: selic["status"],
-                        Selic.dt_atualizacao: selic["dt_atualizacao"]}).execute()
+
+            ultimo = (
+                Selic
+                .select()
+                .where(Selic.status == True)
+                .order_by(Selic.dt_referencia.desc())
+                .first()
+            )
+
+            # Primeira carga
+            if ultimo is None:
+                Selic.create(
+                    indice=valor_api,
+                    status=True,
+                    dt_referencia=data_api,
+                    dt_atualizacao=datetime.now()
+                )
+
+            # Mesma Selic: prolonga a vigência
+            elif ultimo.indice == valor_api:
+                ultimo.dt_referencia = data_api
+                ultimo.dt_atualizacao = datetime.now()
+                ultimo.save()
+
+            # Selic mudou: inicia nova vigência
+            else:
+                Selic.create(
+                    indice=valor_api,
+                    status=True,
+                    dt_referencia=data_api,
+                    dt_atualizacao=datetime.now()
+                )

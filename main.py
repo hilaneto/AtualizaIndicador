@@ -17,13 +17,12 @@ def atualizar_bitcoin():
     Bitcoin.atualizar_bitcoin()
 
 def main():
-
     scheduler = BlockingScheduler()
 
     # Indicadores: segunda a sexta, 08:00 às 19:30
     scheduler.add_job(atualizar_indicadores, trigger="cron", day_of_week="mon-fri", hour="8-19", minute="0,30" )
 
-    # Bitcoin: 24 horas / 7 dias
+    # Bitcoin: 24horas/7dias
     scheduler.add_job(atualizar_bitcoin, trigger="cron", minute="0,30")
 
     print("Scheduler iniciado.")

@@ -23,7 +23,7 @@ class Ipca(Model):
         data_final = hoje.strftime("%d/%m/%Y")
 
         # API Banco Central ---------------------------------------------
-        url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados"
+        url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.10844/dados"
 
         parametros = { "formato": "json", "dataInicial": data_inicial, "dataFinal": data_final }
         resposta = requests.get(url, params=parametros, timeout=10)
