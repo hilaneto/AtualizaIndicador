@@ -25,39 +25,35 @@ class Temperatura(Model):
         url = "https://wis2bra.inmet.gov.br/oapi/collections/stations/items"
 
         todas_estacoes = []
-
         capitais_regioes = {
-        "BRASILIA": "Centro-Oeste",
-        "GOIANIA": "Centro-Oeste",
-        "CUIABA": "Centro-Oeste",
-        "CAMPO GRANDE": "Centro-Oeste",
-
-        "MACEIO": "Nordeste",
-        "SALVADOR": "Nordeste",
-        "FORTALEZA": "Nordeste",
-        "SAO LUIS": "Nordeste",
-        "JOAO PESSOA": "Nordeste",
-        "RECIFE": "Nordeste",
-        "TERESINA": "Nordeste",
-        "NATAL": "Nordeste",
-        "ARACAJU": "Nordeste",
-
-        "RIO BRANCO": "Norte",
-        "MACAPA": "Norte",
-        "MANAUS": "Norte",
-        "BELEM": "Norte",
-        "PORTO VELHO": "Norte",
-        "BOA VISTA": "Norte",
-        "PALMAS": "Norte",
-
-        "VITORIA": "Sudeste",
-        "BELO HORIZONTE": "Sudeste",
-        "RIO DE JANEIRO": "Sudeste",
-        "SAO PAULO": "Sudeste",
-
-        "CURITIBA": "Sul",
-        "PORTO ALEGRE": "Sul",
-        "FLORIANOPOLIS": "Sul"}
+            "BRASILIA": {"cidade": "Brasília", "regiao": "Centro-Oeste"},
+            "GOIANIA": {"cidade": "Goiânia", "regiao": "Centro-Oeste"},
+            "CUIABA": {"cidade": "Cuiabá", "regiao": "Centro-Oeste"},
+            "CAMPO GRANDE": {"cidade": "Campo Grande", "regiao": "Centro-Oeste"},
+            "MACEIO": {"cidade": "Maceió","regiao": "Nordeste"},
+            "SALVADOR": {"cidade": "Salvador", "regiao": "Nordeste"},
+            "FORTALEZA": {"cidade": "Fortaleza", "regiao": "Nordeste"},
+            "SAO LUIS": {"cidade": "São Luís", "regiao": "Nordeste"},
+            "JOAO PESSOA": {"cidade": "João Pessoa", "regiao": "Nordeste"},
+            "RECIFE": {"cidade": "Recife", "regiao": "Nordeste"},
+            "TERESINA": {"cidade": "Teresina", "regiao": "Nordeste"},
+            "NATAL": {"cidade": "Natal", "regiao": "Nordeste"},
+            "ARACAJU": {"cidade": "Aracaju", "regiao": "Nordeste"},
+            "RIO BRANCO": {"cidade": "Rio Branco", "regiao": "Norte"},
+            "MACAPA": {"cidade": "Macapá", "regiao": "Norte"},
+            "MANAUS": {"cidade": "Manaus", "regiao": "Norte"},
+            "BELEM": {"cidade": "Belém", "regiao": "Norte"},
+            "PORTO VELHO": {"cidade": "Porto Velho", "regiao": "Norte"},
+            "BOA VISTA": {"cidade": "Boa Vista", "regiao": "Norte"},
+            "PALMAS": {"cidade": "Palmas", "regiao": "Norte"},
+            "VITORIA": {"cidade": "Vitória", "regiao": "Sudeste"},
+            "BELO HORIZONTE": {"cidade": "Belo Horizonte", "regiao": "Sudeste"},
+            "RIO DE JANEIRO": {"cidade": "Rio de Janeiro", "regiao": "Sudeste"},
+            "SAO PAULO": {"cidade": "São Paulo", "regiao": "Sudeste"},
+            "CURITIBA": {"cidade": "Curitiba", "regiao": "Sul"},
+            "PORTO ALEGRE": {"cidade": "Porto Alegre", "regiao": "Sul"},
+            "FLORIANOPOLIS": {"cidade": "Florianópolis", "regiao": "Sul"}
+        }
 
         # Estaćões das Capitais -----------------------------------------------------------------------
         while url:
@@ -72,9 +68,9 @@ class Temperatura(Model):
         for estacao in todas_estacoes:
             prop = estacao["properties"]
             nome = prop["name"].upper()
-            for cidade, regiao in capitais_regioes.items():
-                if cidade in nome:
-                    estacoes_capitais[prop["wigos_station_identifier"]] = {"cidade": cidade, "regiao": regiao}
+            for cidade_busca, capital in capitais_regioes.items():
+                if cidade_busca in nome:
+                    estacoes_capitais[prop["wigos_station_identifier"]] = {"cidade": capital["cidade"], "regiao": capital["regiao"]}
 
         # Todas as observaćões -----------------------------------------------------------------------
         url = ("https://wis2bra.inmet.gov.br/oapi/collections/urn:wmo:md:br-inmet:synop/items")
@@ -132,17 +128,18 @@ class Temperatura(Model):
                 temperaturas_capitais[cidade] = nova_temperatura
 
         # Capitais sem temperatura disponível
-        for cidade, regiao in capitais_regioes.items():
+        for capital in capitais_regioes.values():
+            cidade = capital["cidade"]
+            regiao = capital["regiao"]            
             if cidade not in temperaturas_capitais:
                 temperaturas_capitais[cidade] = {
                     "regiao": regiao,
                     "cidade": cidade,
                     "temperatura": None,
-                    "dt_referencia": datetime.now(timezone.utc),
+                    "dt_referencia": agora,
                     "status": False}
         temperaturas = list(temperaturas_capitais.values())
         return temperaturas
-
 
     @staticmethod
     def atualizar_temperatura():
