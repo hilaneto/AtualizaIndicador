@@ -1,166 +1,412 @@
-
 import requests
-from peewee import Model, AutoField, CharField, DecimalField, DateTimeField, BooleanField
-from database.conexao import db, conectar
-from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 
-class Temperatura(Model):
-    cd_temperatura = AutoField()
-    regiao = CharField(max_length=20)
+from datetime import datetime, timezone, timedelta
+
+from peewee import (
+    Model,
+    AutoField,
+    ForeignKeyField,
+    DecimalField,
+    DateTimeField,
+    BooleanField,
+    CharField
+)
+
+from database.conexao import db, conectar
+
+
+# ==============================================================
+# CAPITAL
+# ==============================================================
+class Capital(Model):
+
+    cd_capital = AutoField()
     cidade = CharField(max_length=50)
-    temperatura = DecimalField(max_digits=5, decimal_places=2, null=True)
-    dt_referencia = DateTimeField(null=True)
-    dt_atualizacao = DateTimeField(default=datetime.now)
-    status = BooleanField(default=True)
+    cidade_busca = CharField(max_length=50)
+    uf = CharField(max_length=2)
+    regiao = CharField(max_length=20)
+    cd_ibge = CharField(max_length=7)
+
+    class Meta:
+        database = db
+        table_name = "tb_capital"
+
+
+# ==============================================================
+# ESTAÇÃO DA CAPITAL
+# ==============================================================
+class EstacaoCapital(Model):
+
+    cd_estacao = AutoField()
+
+    capital = ForeignKeyField(
+        Capital,
+        field=Capital.cd_capital,
+        column_name="cd_capital",
+        backref="estacoes"
+    )
+
+    wigos = CharField(
+        max_length=60,
+        unique=True
+    )
+
+    nome_estacao = CharField(
+        max_length=100
+    )
+
+    status = BooleanField(
+        default=True
+    )
+
+    class Meta:
+        database = db
+        table_name = "tb_estacao_capital"
+
+
+# ==============================================================
+# TEMPERATURA
+# ==============================================================
+class Temperatura(Model):
+
+    cd_temperatura = AutoField()
+
+    capital = ForeignKeyField(
+        Capital,
+        field=Capital.cd_capital,
+        column_name="cd_capital",
+        backref="temperaturas"
+    )
+
+    temperatura = DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True
+    )
+
+    dt_referencia = DateTimeField()
+
+    dt_atualizacao = DateTimeField(
+        default=datetime.now
+    )
+
+    status = BooleanField(
+        default=True
+    )
 
     class Meta:
         database = db
         table_name = "tb_temperatura"
-        indexes = ((("cidade", "dt_referencia"), True),)
 
+        indexes = (
+            (("capital", "dt_referencia"), True),
+        )
 
+    # ==========================================================
+    # CARREGAR ESTAÇÕES ATIVAS
+    # ==========================================================
+    @staticmethod
+    def carregar_estacoes():
+
+        with conectar():
+
+            consulta = (
+                EstacaoCapital
+                .select(
+                    EstacaoCapital.wigos,
+                    EstacaoCapital.capital
+                )
+                .where(
+                    EstacaoCapital.status == True
+                )
+            )
+
+            estacoes = {
+                registro.wigos:
+                    registro.capital.cd_capital
+
+                for registro in consulta
+            }
+
+        return estacoes
+
+    # ==========================================================
+    # CARREGAR CAPITAIS
+    # ==========================================================
+    @staticmethod
+    def carregar_capitais():
+
+        with conectar():
+
+            capitais = list(
+                Capital.select()
+            )
+
+        return capitais
+
+    # ==========================================================
+    # BUSCAR TEMPERATURAS
+    # ==========================================================
     @staticmethod
     def buscar():
-        url = "https://wis2bra.inmet.gov.br/oapi/collections/stations/items"
 
-        todas_estacoes = []
-        capitais_regioes = {
-            "BRASILIA": {"cidade": "Brasília", "regiao": "Centro-Oeste"},
-            "GOIANIA": {"cidade": "Goiânia", "regiao": "Centro-Oeste"},
-            "CUIABA": {"cidade": "Cuiabá", "regiao": "Centro-Oeste"},
-            "CAMPO GRANDE": {"cidade": "Campo Grande", "regiao": "Centro-Oeste"},
-            "MACEIO": {"cidade": "Maceió","regiao": "Nordeste"},
-            "SALVADOR": {"cidade": "Salvador", "regiao": "Nordeste"},
-            "FORTALEZA": {"cidade": "Fortaleza", "regiao": "Nordeste"},
-            "SAO LUIS": {"cidade": "São Luís", "regiao": "Nordeste"},
-            "JOAO PESSOA": {"cidade": "João Pessoa", "regiao": "Nordeste"},
-            "RECIFE": {"cidade": "Recife", "regiao": "Nordeste"},
-            "TERESINA": {"cidade": "Teresina", "regiao": "Nordeste"},
-            "NATAL": {"cidade": "Natal", "regiao": "Nordeste"},
-            "ARACAJU": {"cidade": "Aracaju", "regiao": "Nordeste"},
-            "RIO BRANCO": {"cidade": "Rio Branco", "regiao": "Norte"},
-            "MACAPA": {"cidade": "Macapá", "regiao": "Norte"},
-            "MANAUS": {"cidade": "Manaus", "regiao": "Norte"},
-            "BELEM": {"cidade": "Belém", "regiao": "Norte"},
-            "PORTO VELHO": {"cidade": "Porto Velho", "regiao": "Norte"},
-            "BOA VISTA": {"cidade": "Boa Vista", "regiao": "Norte"},
-            "PALMAS": {"cidade": "Palmas", "regiao": "Norte"},
-            "VITORIA": {"cidade": "Vitória", "regiao": "Sudeste"},
-            "BELO HORIZONTE": {"cidade": "Belo Horizonte", "regiao": "Sudeste"},
-            "RIO DE JANEIRO": {"cidade": "Rio de Janeiro", "regiao": "Sudeste"},
-            "SAO PAULO": {"cidade": "São Paulo", "regiao": "Sudeste"},
-            "CURITIBA": {"cidade": "Curitiba", "regiao": "Sul"},
-            "PORTO ALEGRE": {"cidade": "Porto Alegre", "regiao": "Sul"},
-            "FLORIANOPOLIS": {"cidade": "Florianópolis", "regiao": "Sul"}
-        }
-
-        # Estaćões das Capitais -----------------------------------------------------------------------
-        while url:
-            resposta = requests.get(url, params={"f": "json", "limit": 1000}, timeout=30)
-            resposta.raise_for_status()
-            dados = resposta.json()
-            todas_estacoes.extend(dados["features"])
-            url = next( (link["href"]
-                        for link in dados.get("links", [])
-                        if link.get("rel") == "next"),None)
-        estacoes_capitais = {}
-        for estacao in todas_estacoes:
-            prop = estacao["properties"]
-            nome = prop["name"].upper()
-            for cidade_busca, capital in capitais_regioes.items():
-                if cidade_busca in nome:
-                    estacoes_capitais[prop["wigos_station_identifier"]] = {"cidade": capital["cidade"], "regiao": capital["regiao"]}
-
-        # Todas as observaćões -----------------------------------------------------------------------
-        url = ("https://wis2bra.inmet.gov.br/oapi/collections/urn:wmo:md:br-inmet:synop/items")
+        estacoes = Temperatura.carregar_estacoes()
+        capitais = Temperatura.carregar_capitais()
 
         agora = datetime.now(timezone.utc)
-        inicio = agora - timedelta(hours=6)
 
-        todas_observacoes = []
+        # Janela de busca no INMET
+        inicio = agora - timedelta(hours=24)
 
-        parametros = {"f": "json", "limit": 1000, "datetime": f"{inicio.isoformat()}/{agora.isoformat()}"}
+        url = (
+            "https://wis2bra.inmet.gov.br/"
+            "oapi/collections/"
+            "urn:wmo:md:br-inmet:synop/items"
+        )
 
-        while url:
-            resposta = requests.get(url, params=parametros, timeout=30)
-            resposta.raise_for_status()
-            dados = resposta.json()
-            todas_observacoes.extend(dados["features"])
+        parametros = {
+            "f": "json",
+            "limit": 1000,
+            "datetime": (
+                f"{inicio.isoformat()}/"
+                f"{agora.isoformat()}"
+            )
+        }
 
-            url = next( (link["href"]
-                        for link in dados.get("links", [])
-                        if link.get("rel") == "next" ), None)
-
-            parametros = None
-
-        # Temperaturas por capitais ---------------------------------------------------------
         temperaturas_capitais = {}
 
-        for obs in todas_observacoes:
-            prop = obs["properties"]
+        while url:
 
-            if prop["name"] != "air_temperature":
-                continue
+            resposta = requests.get(
+                url,
+                params=parametros,
+                timeout=30
+            )
 
-            wigos = prop["wigos_station_identifier"]
+            resposta.raise_for_status()
 
-            capital = estacoes_capitais.get(wigos)
+            dados = resposta.json()
 
-            if capital is None:
-                continue
+            for observacao in dados.get(
+                "features",
+                []
+            ):
 
-            cidade = capital["cidade"]
+                propriedades = observacao.get(
+                    "properties",
+                    {}
+                )
 
-            dt_referencia = datetime.fromisoformat(
-                prop["phenomenonTime"].replace("Z", "+00:00"))
+                # ----------------------------------------------
+                # Apenas temperatura do ar
+                # ----------------------------------------------
+                if (
+                    propriedades.get("name")
+                    != "air_temperature"
+                ):
+                    continue
 
-            nova_temperatura = {
-                "regiao": capital["regiao"],
-                "cidade": cidade,
-                "temperatura": prop["value"],
-                "dt_referencia": dt_referencia,
-                "status": True}
+                wigos = propriedades.get(
+                    "wigos_station_identifier"
+                )
 
-            temperatura_atual = temperaturas_capitais.get(cidade)
+                # Descobre a qual capital
+                # pertence a estação
+                cd_capital = estacoes.get(
+                    wigos
+                )
 
-            if (temperatura_atual is None or dt_referencia > temperatura_atual["dt_referencia"]):
-                temperaturas_capitais[cidade] = nova_temperatura
+                if cd_capital is None:
+                    continue
 
-        # Capitais sem temperatura disponível
-        for capital in capitais_regioes.values():
-            cidade = capital["cidade"]
-            regiao = capital["regiao"]            
-            if cidade not in temperaturas_capitais:
-                temperaturas_capitais[cidade] = {
-                    "regiao": regiao,
-                    "cidade": cidade,
-                    "temperatura": None,
-                    "dt_referencia": agora,
-                    "status": False}
-        temperaturas = list(temperaturas_capitais.values())
-        return temperaturas
+                valor = propriedades.get(
+                    "value"
+                )
 
+                dt_referencia = propriedades.get(
+                    "phenomenonTime"
+                )
+
+                if (
+                    valor is None
+                    or not dt_referencia
+                ):
+                    continue
+
+                dt_referencia = (
+                    datetime.fromisoformat(
+                        dt_referencia.replace(
+                            "Z",
+                            "+00:00"
+                        )
+                    )
+                )
+
+                temperatura_atual = (
+                    temperaturas_capitais.get(
+                        cd_capital
+                    )
+                )
+
+                # ----------------------------------------------
+                # Mantém apenas a observação mais recente
+                # de cada capital
+                # ----------------------------------------------
+                if (
+                    temperatura_atual is None
+
+                    or
+
+                    dt_referencia
+                    > temperatura_atual[
+                        "dt_referencia"
+                    ]
+                ):
+
+                    temperaturas_capitais[
+                        cd_capital
+                    ] = {
+
+                        "cd_capital":
+                            cd_capital,
+
+                        "temperatura":
+                            valor,
+
+                        "dt_referencia":
+                            dt_referencia,
+
+                        "status":
+                            True
+                    }
+
+            # ----------------------------------------------
+            # Próxima página da API
+            # ----------------------------------------------
+            proximo = next(
+                (
+                    link.get("href")
+
+                    for link in dados.get(
+                        "links",
+                        []
+                    )
+
+                    if link.get("rel")
+                    == "next"
+                ),
+                None
+            )
+
+            url = proximo
+
+            # A URL da próxima página já
+            # contém os parâmetros
+            parametros = None
+
+        # ======================================================
+        # GARANTIR AS 27 CAPITAIS NO RESULTADO
+        # ======================================================
+        resultado = []
+
+        for capital in capitais:
+
+            registro = (
+                temperaturas_capitais.get(
+                    capital.cd_capital
+                )
+            )
+
+            if registro:
+
+                resultado.append(
+                    registro
+                )
+
+            else:
+
+                resultado.append({
+                    "cd_capital":
+                        capital.cd_capital,
+
+                    "temperatura":
+                        None,
+
+                    "dt_referencia":
+                        agora,
+
+                    "status":
+                        False
+                })
+
+        return resultado
+
+    # ==========================================================
+    # ATUALIZAR TB_TEMPERATURA
+    # ==========================================================
     @staticmethod
     def atualizar_temperatura():
 
-        dados = Temperatura.buscar()
+        temperaturas = (
+            Temperatura.buscar()
+        )
+
+        agora = datetime.now()
 
         with conectar():
-            for registro in dados:
 
-                temperatura = {"regiao": registro["regiao"],
-                               "cidade": registro["cidade"],
-                               "temperatura": (Decimal(str(registro["temperatura"]))
-                        if registro["temperatura"] is not None else None),
-                    "status": registro["status"],
-                    "dt_referencia": registro["dt_referencia"],
-                    "dt_atualizacao": datetime.now()}
+            for registro in temperaturas:
 
-                (Temperatura
-                 .insert(**temperatura)
-                 .on_conflict(conflict_target=[Temperatura.cidade, Temperatura.dt_referencia],
-                 update={Temperatura.regiao: temperatura["regiao"],
-                         Temperatura.temperatura: temperatura["temperatura"],
-                         Temperatura.status: temperatura["status"],
-                         Temperatura.dt_atualizacao: temperatura["dt_atualizacao"]}).execute())
+                (
+                    Temperatura
+                    .insert(
+                        capital=
+                            registro[
+                                "cd_capital"
+                            ],
+
+                        temperatura=
+                            registro[
+                                "temperatura"
+                            ],
+
+                        dt_referencia=
+                            registro[
+                                "dt_referencia"
+                            ],
+
+                        dt_atualizacao=
+                            agora,
+
+                        status=
+                            registro[
+                                "status"
+                            ]
+                    )
+
+                    .on_conflict(
+                        conflict_target=[
+                            Temperatura.capital,
+                            Temperatura.dt_referencia
+                        ],
+
+                        update={
+                            Temperatura.temperatura:
+                                registro[
+                                    "temperatura"
+                                ],
+
+                            Temperatura.dt_atualizacao:
+                                agora,
+
+                            Temperatura.status:
+                                registro[
+                                    "status"
+                                ]
+                        }
+                    )
+
+                    .execute()
+                )
+
+        return len(temperaturas)
