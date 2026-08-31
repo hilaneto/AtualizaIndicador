@@ -38,4 +38,4 @@ class Salario(Model):
                            "status": True,
                            "dt_referencia": datetime.strptime(registro["data"], "%d/%m/%Y").date(),"dt_atualizacao": datetime.now()
                           }
-                (Salario.insert(**salario).on_conflict(conflict_target=[Salario.vl_salario],action="IGNORE").execute())
+                (Salario.insert(**salario).on_conflict(conflict_target=[Salario.dt_referencia],action="IGNORE").execute())

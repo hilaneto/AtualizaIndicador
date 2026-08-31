@@ -1,8 +1,8 @@
 
 
-select * from tb_capital;
-select * from tb_estacao_capital;
-select * from tb_feriado;
+select * from tb_capital; 			-- popular manualmente
+select * from tb_estacao_capital; 	-- popular manualmente
+select * from tb_feriado; 			-- popular manualmente
 select * from tb_ipca;
 select * from tb_moeda;
 select * from tb_salariominimo;
