@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 from peewee import Model, AutoField, IntegerField, UUIDField, DateField, CharField, BooleanField, TextField, DateTimeField
 from dotenv import load_dotenv
-from database.conexao import db, conectar
+from database.conexao import db
 from indicadores.temperatura import Capital
 
 load_dotenv()
@@ -24,26 +24,30 @@ class Feriado(Model):
     class Meta:
         database = db
         table_name = "tb_feriado"
-        indexes = ((("cd_capital", "id_api"),True),)
+        indexes = ((("cd_capital", "id_api"), True),)
 
+    # =========================================================
     # Buscar feriados de uma capital
+    # =========================================================
     @staticmethod
     def buscar(codigo_ibge, ano=None):
         if ano is None:
-           ano = datetime.now().year
+            ano = datetime.now().year
 
         api_key = os.getenv("FERIADOS_API_KEY")
 
         if not api_key:
-            raise ValueError("Variável FERIADOS_API_KEYnão encontrada no .env.")
+            raise ValueError("Variável FERIADOS_API_KEY não encontrada no .env.")
 
         api_key = api_key.strip()
 
         url = (f"https://feriadosapi.com/api/v1/feriados/cidade/{codigo_ibge}")
 
-        resposta = requests.get(url,params={"ano": ano}, headers={"Authorization": f"Bearer {api_key}"}, timeout=30)
+        resposta = requests.get(url, params={"ano": ano}, headers={"Authorization": f"Bearer {api_key}"}, timeout=30)
 
+        # -----------------------------------------------------
         # Erros HTTP
+        # -----------------------------------------------------
         try:
             resposta.raise_for_status()
 
@@ -54,9 +58,12 @@ class Feriado(Model):
             print(f"Resposta: {resposta.text[:500]}")
             raise erro
 
+        # -----------------------------------------------------
         # Converter resposta para JSON
+        # -----------------------------------------------------
         try:
             dados = resposta.json()
+
         except requests.exceptions.JSONDecodeError:
             print("\nResposta da API não é JSON.")
             print(f"URL: {resposta.url}")
@@ -65,82 +72,164 @@ class Feriado(Model):
             print(f"Resposta: {resposta.text[:1000]}")
             raise
 
+        # -----------------------------------------------------
         # Validar estrutura
+        # -----------------------------------------------------
         if "feriados" not in dados:
             raise ValueError("Resposta da API não contém a chave 'feriados'.")
 
+        # -----------------------------------------------------
         # Padronizar dados
+        # -----------------------------------------------------
         feriados = []
         for item in dados["feriados"]:
-            feriados.append({"id_api":item["id"],
-                             "dt_feriado":datetime.strptime(item["data"], "%d/%m/%Y").date(),
-                             "nome":item["nome"],
-                             "tipo":item["tipo"],
-                             "uf":item.get("uf"),
-                             "codigo_ibge":item.get("codigo_ibge"),
-                             "bancario":item.get("bancario",False),
-                             "descricao":item.get("descricao")})
+            feriados.append(
+                {"id_api": item["id"],
+                 "dt_feriado": datetime.strptime(item["data"],"%d/%m/%Y").date(),
+                 "nome": item["nome"],
+                 "tipo": item["tipo"],
+                 "uf": item.get("uf"),
+                 "codigo_ibge": item.get("codigo_ibge"),
+                 "bancario": item.get("bancario", False),
+                 "descricao": item.get("descricao")})
+
         return feriados
 
-    # =========================================================
-    # Atualizar feriados das 27 capitais
-    # Sempre ano corrente
-    # =========================================================
     @staticmethod
     def atualizar_feriado():
-        ano = datetime.now().year
 
-        # Buscar capitais
-        with conectar():
-            capitais = list(Capital.select().order_by(Capital.cidade))
+        # =========================================================
+        # Somente capitais reais
+        # 100 = Brasil
+        # 101 = Estado
+        # =========================================================
+        capitais = (
+            Capital
+            .select()
+            .where(Capital.cd_capital < 100)
+            .order_by(Capital.cd_capital)
+        )
 
-        if not capitais:
-            raise ValueError("Nenhuma capital encontrada na tb_capitais.")
+        # =========================================================
+        # Controle de duplicidade durante a execução
+        # =========================================================
+        feriados_nacionais = set()
+        feriados_estaduais = set()
 
-        total = 0
-
-        # Percorrer as 27 capitais
+        # =========================================================
+        # Percorrer as capitais
+        # =========================================================
         for capital in capitais:
-            print(f"Buscando: "
-                  f"{capital.cidade} "
-                  f"({capital.cd_ibge})"            )
-            try:
-                dados = Feriado.buscar(codigo_ibge=capital.cd_ibge, ano=ano)
 
-            except Exception as erro:
-                print(f"Erro em {capital.cidade}: "
-                      f"{erro}")
+            print(
+                f"Buscando: {capital.cidade} "
+                f"({capital.cd_ibge})"
+            )
 
-                # Não interrompe as demais capitais
-                continue
+            dados_api = Feriado.buscar(
+                codigo_ibge=capital.cd_ibge
+            )
 
-            # Gravar no PostgreSQL
-            with conectar():
-                for registro in dados:
-                    registro["cd_capital"] = (capital.cd_capital)
-                    agora = datetime.now()
-                    (Feriado.insert(**registro, dt_atualizacao=agora).on_conflict(
-                            conflict_target=[Feriado.cd_capital, Feriado.id_api],
-                            update={Feriado.dt_feriado:registro["dt_feriado"],
-                                    Feriado.nome:registro["nome"],
-                                    Feriado.tipo:registro["tipo"],
-                                    Feriado.uf:registro["uf"],
-                                    Feriado.codigo_ibge:registro["codigo_ibge"],
-                                    Feriado.bancario:registro["bancario"],
-                                    Feriado.descricao:registro["descricao"],
-                                    Feriado.dt_atualizacao:agora
-                                    }).execute())
-                    total += 1
+            # =====================================================
+            # Percorrer feriados retornados pela API
+            # =====================================================
+            for feriado in dados_api:
 
-            print(f"{capital.cidade}: "
-                  f"{len(dados)} feriados.")
+                dt_feriado = feriado["dt_feriado"]
+                nome = feriado["nome"]
+                tipo = feriado["tipo"]
 
-        # Resultado
-        print()
-        print("========================================")
-        print(f"Feriados de {ano} atualizados.")
-        print(f"Capitais processadas: "
-              f"{len(capitais)}")
-        print(f"Total de registros processados: "
-              f"{total}")
-        print("========================================")
+                tipo_normalizado = tipo.strip().lower()
+
+                # =================================================
+                # FERIADO NACIONAL
+                # =================================================
+                if tipo_normalizado == "nacional":
+
+                    chave = (
+                        dt_feriado,
+                        nome
+                    )
+
+                    # Já processado nesta execução
+                    if chave in feriados_nacionais:
+                        continue
+
+                    feriados_nacionais.add(chave)
+
+                    cd_capital = 100
+                    uf = "BR"
+                    codigo_ibge = None
+
+                # =================================================
+                # FERIADO ESTADUAL
+                # =================================================
+                elif tipo_normalizado == "estadual":
+
+                    # UF do próprio estado
+                    uf = capital.uf
+
+                    chave = (
+                        uf,
+                        dt_feriado,
+                        nome
+                    )
+
+                    # Já processado para esta UF
+                    if chave in feriados_estaduais:
+                        continue
+
+                    feriados_estaduais.add(chave)
+
+                    cd_capital = 101
+                    codigo_ibge = None
+
+                # =================================================
+                # FERIADO MUNICIPAL
+                # =================================================
+                else:
+
+                    cd_capital = capital.cd_capital
+                    uf = capital.uf
+                    codigo_ibge = str(capital.cd_ibge)
+
+                # =================================================
+                # Dados para gravação
+                # =================================================
+                dados = {
+                    "cd_capital": cd_capital,
+                    "id_api": feriado["id_api"],
+                    "dt_feriado": dt_feriado,
+                    "nome": nome,
+                    "tipo": tipo,
+                    "uf": uf,
+                    "codigo_ibge": codigo_ibge,
+                    "bancario": feriado["bancario"],
+                    "descricao": feriado["descricao"],
+                    "dt_atualizacao": datetime.now()
+                }
+
+                # =================================================
+                # INSERT / UPDATE
+                # =================================================
+                (
+                    Feriado
+                    .insert(**dados)
+                    .on_conflict(
+                        conflict_target=[
+                            Feriado.cd_capital,
+                            Feriado.id_api
+                        ],
+                        preserve=[
+                            Feriado.dt_feriado,
+                            Feriado.nome,
+                            Feriado.tipo,
+                            Feriado.uf,
+                            Feriado.codigo_ibge,
+                            Feriado.bancario,
+                            Feriado.descricao,
+                            Feriado.dt_atualizacao
+                        ]
+                    )
+                    .execute()
+                )
