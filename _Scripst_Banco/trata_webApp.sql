@@ -10,10 +10,42 @@ select * from tb_selic;
 select * from tb_temperatura;
 select * from tb_usuario;
 select * from tb_contato;
+select * from tb_ibovespa;
 
-select cd_feriado, b.cd_capital, b.cidade, a.dt_feriado , nome, tipo, b.uf, bancario, descricao, dt_atualizacao
+select * from tb_feriado
+where uf = 'AC'
+
+
+select * from tb_moeda;
+where USDV
+USDC
+
+select moeda, count(*) as qtd from tb_moeda
+group by moeda;
+
+
+SELECT * FROM tb_moeda
+WHERE status = true AND moeda IN ('USDC', 'USDV')
+ORDER BY dt_referencia DESC;
+
+
+SELECT DISTINCT ON (moeda) * 
+FROM tb_moeda, 
+WHERE status = true AND moeda IN ('USDC', 'USDV')
+ORDER BY moeda, dt_referencia DESC;
+
+
+select cd_feriado, b.cd_capital, b.cidade, a.dt_feriado, nome, tipo, b.uf, bancario, descricao, dt_atualizacao
 from tb_feriado a left join tb_capital b
 on a.cd_capital = b.cd_capital
+
+
+select a.dt_feriado , nome, descricao
+from tb_feriado a left join tb_capital b
+on a.cd_capital = b.cd_capital
+where a.bancario is true
+order by a.dt_feriado
+
 
 select * from tb_feriado
 where tipo = 'NACIONAL'
@@ -42,8 +74,6 @@ where cd_capital = 25
 
 select * from tb_temperatura
 where cd_capital = 25
-
-
 
 select distinct cd_capital from tb_feriado;
 

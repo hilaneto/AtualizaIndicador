@@ -139,6 +139,23 @@ CONSTRAINT ck_tb_capital_regiao CHECK (regiao IN('Brasil', 'Norte', 'Nordeste', 
 );
 
 
+CREATE TABLE tb_ibovespa (
+    cd_ibovespa serial PRIMARY KEY,
+    pontos numeric(12,2) NOT NULL,
+    variacao numeric(8,2) NOT NULL,
+    variacao_pontos numeric(12,2) NOT NULL,
+    abertura numeric(12,2),
+    maxima numeric(12,2),
+    minima numeric(12,2),
+    fechamento_anterior numeric(12,2),
+    status boolean NOT NULL DEFAULT true,
+    dt_referencia timestamptz NOT NULL,
+    dt_atualizacao timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_tb_ibovespa_referencia UNIQUE (dt_referencia)
+);
+
+
+
 -- ============================================================
 -- REGISTROS ESPECIAIS
 -- ============================================================

@@ -1,5 +1,4 @@
 import logging
-
 from apscheduler.schedulers.blocking import BlockingScheduler
 from indicadores.dolar import Dolar
 from indicadores.euro import Euro
@@ -9,6 +8,7 @@ from indicadores.selic import Selic
 from indicadores.salario import Salario
 from indicadores.temperatura import Temperatura
 from indicadores.feriado import Feriado
+from indicadores.ibovespa import Ibovespa
 
 # Log: arquivo no diretório de trabalho do programa
 logging.basicConfig(filename="atualizador.log",
@@ -35,6 +35,7 @@ def atualizar_seg_sex():
     executar_atualizacao("IPCA", Ipca.atualizar_ipca)
     executar_atualizacao("Selic", Selic.atualizar_selic)
     executar_atualizacao("Salário mínimo", Salario.atualizar_salario)
+    executar_atualizacao("Ibovespa", Ibovespa.atualizar_ibovespa)
 
 def atualizar_24h7():
     executar_atualizacao("Bitcoin", Bitcoin.atualizar_bitcoin)
@@ -75,7 +76,6 @@ def main():
     except Exception:
         logger.exception("Erro fatal no programa.")
         raise
-
 
 if __name__ == "__main__":
     main()
