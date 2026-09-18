@@ -13,7 +13,7 @@ class Dolar(Model):
     cd_moeda = AutoField()
     valor = DecimalField(max_digits=18, decimal_places=5)
     status = BooleanField(default=True, null=False)
-    moeda = CharField(max_length=4, null=False)
+    moeda = CharField(max_length=5, null=False)
     dt_referencia = DateTimeField(null=False)
     dt_atualizacao = DateTimeField(default=datetime.now, null=False)
 
@@ -23,7 +23,7 @@ class Dolar(Model):
 
     @staticmethod
     def buscar():
-        url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+        url = "https://economia.awesomeapi.com.br/json/last/USD-BRL,USD-BRLT"
         headers = {"x-api-key": AWESOME_API_KEY}
         resposta = requests.get(url, headers=headers, timeout=10)
         resposta.raise_for_status()
@@ -31,23 +31,26 @@ class Dolar(Model):
 
     @staticmethod
     def tratar_dados(dados_api):
-        dolar = dados_api["USDBRL"]
-        dt_referencia = datetime.strptime(dolar["create_date"], "%Y-%m-%d %H:%M:%S")
+        dolarc = dados_api["USDBRL"]
+        dolart = dados_api["USDBRLT"]
+
+        dt_comercial = datetime.strptime(dolarc["create_date"], "%Y-%m-%d %H:%M:%S")
+        dt_turismo = datetime.strptime(dolart["create_date"], "%Y-%m-%d %H:%M:%S")
         dt_atualizacao = datetime.now()
-        return [{"valor": Decimal(dolar["bid"]),
-                 "status": True,
-                 "moeda": "USDC",
-                 "dt_referencia": dt_referencia,
-                 "dt_atualizacao": dt_atualizacao
-                },
-                {
-                 "valor": Decimal(dolar["ask"]),
-                 "status": True,
-                 "moeda": "USDV",
-                 "dt_referencia": dt_referencia,
-                 "dt_atualizacao": dt_atualizacao
-                }
-               ]
+
+        return [
+            {"valor": Decimal(dolarc["bid"]), "status": True, "moeda": "USDCC",
+            "dt_referencia": dt_comercial, "dt_atualizacao": dt_atualizacao},
+
+            {"valor": Decimal(dolarc["ask"]), "status": True, "moeda": "USDCV",
+            "dt_referencia": dt_comercial, "dt_atualizacao": dt_atualizacao},
+
+            {"valor": Decimal(dolart["bid"]), "status": True, "moeda": "USDTC",
+            "dt_referencia": dt_turismo, "dt_atualizacao": dt_atualizacao},
+
+            {"valor": Decimal(dolart["ask"]), "status": True, "moeda": "USDTV",
+            "dt_referencia": dt_turismo, "dt_atualizacao": dt_atualizacao}
+        ]
 
     @staticmethod
     def atualizar_dolar():
