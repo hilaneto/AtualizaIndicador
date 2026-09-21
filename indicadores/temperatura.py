@@ -75,28 +75,24 @@ class Temperatura(Model):
 
     # ==========================================================
     # BUSCAR TEMPERATURAS
-    # ==========================================================
-    @staticmethod
+    # ==========================================================@staticmethod
     def buscar():
 
         estacoes = Temperatura.carregar_estacoes()
         capitais = Temperatura.carregar_capitais()
+
         agora = datetime.now(timezone.utc)
-
-        # Hora de referência da execução
-        # Ex.: 13:32:48 -> 13:00:00
-        dt_execucao = agora.replace(minute=0, second=0, microsecond=0)
-
-        # Janela de busca no INMET
         inicio = agora - timedelta(hours=24)
-        url = ("https://wis2bra.inmet.gov.br/oapi/collections/urn:wmo:md:br-inmet:synop/items")
+
+        url = "https://wis2bra.inmet.gov.br/oapi/collections/urn:wmo:md:br-inmet:synop/items"
 
         parametros = {
             "f": "json",
             "limit": 1000,
             "datetime": f"{inicio.isoformat()}/{agora.isoformat()}"
         }
-        temperaturas_capitais = {}
+
+        observacoes = []
 
         while url:
             resposta = requests.get(url, params=parametros, timeout=30)
@@ -104,62 +100,98 @@ class Temperatura(Model):
             dados = resposta.json()
 
             for observacao in dados.get("features", []):
-                propriedades = observacao.get("properties",{})
+                propriedades = observacao.get("properties", {})
 
-                # ----------------------------------------------
-                # Apenas temperatura do ar
-                # ----------------------------------------------
                 if propriedades.get("name") != "air_temperature":
                     continue
 
                 wigos = propriedades.get("wigos_station_identifier")
-
-                # Descobre a qual capital pertence a estação
                 cd_capital = estacoes.get(wigos)
 
                 if cd_capital is None:
                     continue
 
                 valor = propriedades.get("value")
-                dt_referencia = propriedades.get("phenomenonTime"                )
+                dt_referencia = propriedades.get("phenomenonTime")
 
                 if valor is None or not dt_referencia:
                     continue
 
-                # ----------------------------------------------
-                # Converte data retornada pelo INMET
-                # ----------------------------------------------
-                dt_referencia = datetime.fromisoformat(dt_referencia.replace("Z", "+00:00"))
-
-                # Normaliza para hora cheia
-                dt_referencia = dt_referencia.replace(minute=0, second=0, microsecond=0)
-
-                # ----------------------------------------------
-                # Considera somente a hora atual
-                # ----------------------------------------------
-                if dt_referencia != dt_execucao:
-                    continue
-
-                temperatura_atual = temperaturas_capitais.get(
-                    cd_capital
+                dt_referencia = datetime.fromisoformat(
+                    dt_referencia.replace("Z", "+00:00")
                 )
 
-                # ----------------------------------------------
-                # Mantém a observação da capital
-                # ----------------------------------------------
-                if (
-                    temperatura_atual is None
-                    or
-                    dt_referencia
-                    > temperatura_atual["dt_referencia"]
-                ):
-                    temperaturas_capitais[cd_capital] = {
-                        "cd_capital": cd_capital,
-                        "temperatura": valor,
-                        "dt_referencia": dt_referencia,
-                        "status": True
-                    }
+                observacoes.append({
+                    "cd_capital": cd_capital,
+                    "temperatura": valor,
+                    "dt_referencia": dt_referencia
+                })
 
+            proximo = next(
+                (link.get("href") for link in dados.get("links", [])
+                if link.get("rel") == "next"),
+                None
+            )
+
+            url = proximo
+            parametros = None
+
+        if not observacoes:
+            return []
+
+        # Última referência efetivamente disponibilizada pelo INMET
+        dt_referencia_atual = max(
+            registro["dt_referencia"]
+            for registro in observacoes
+        )
+
+        # Normaliza a referência
+        dt_referencia_atual = dt_referencia_atual.replace(
+            minute=0,
+            second=0,
+            microsecond=0
+        )
+
+        temperaturas_capitais = {}
+
+        for registro in observacoes:
+
+            dt_referencia = registro["dt_referencia"].replace(
+                minute=0,
+                second=0,
+                microsecond=0
+            )
+
+            if dt_referencia != dt_referencia_atual:
+                continue
+
+            cd_capital = registro["cd_capital"]
+
+            temperaturas_capitais[cd_capital] = {
+                "cd_capital": cd_capital,
+                "temperatura": registro["temperatura"],
+                "dt_referencia": dt_referencia_atual,
+                "status": True
+            }
+
+        # Garante as 27 capitais para a mesma referência
+        resultado = []
+
+        for capital in capitais:
+
+            registro = temperaturas_capitais.get(capital.cd_capital)
+
+            if registro:
+                resultado.append(registro)
+            else:
+                resultado.append({
+                    "cd_capital": capital.cd_capital,
+                    "temperatura": None,
+                    "dt_referencia": dt_referencia_atual,
+                    "status": False
+                })
+
+        return resultado
             # ----------------------------------------------
             # Próxima página da API
             # ----------------------------------------------
