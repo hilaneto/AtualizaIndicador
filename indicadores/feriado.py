@@ -103,12 +103,7 @@ class Feriado(Model):
         # 100 = Brasil
         # 101 = Estado
         # =========================================================
-        capitais = (
-            Capital
-            .select()
-            .where(Capital.cd_capital < 100)
-            .order_by(Capital.cd_capital)
-        )
+        capitais = (Capital.select().where(Capital.cd_capital < 100).order_by(Capital.cd_capital))
 
         # =========================================================
         # Controle de duplicidade durante a execução
@@ -120,43 +115,31 @@ class Feriado(Model):
         # Percorrer as capitais
         # =========================================================
         for capital in capitais:
+            print(f"Buscando: {capital.cidade} "
+                  f"({capital.cd_ibge})"
+                 )
 
-            print(
-                f"Buscando: {capital.cidade} "
-                f"({capital.cd_ibge})"
-            )
-
-            dados_api = Feriado.buscar(
-                codigo_ibge=capital.cd_ibge
-            )
+            dados_api = Feriado.buscar(codigo_ibge=capital.cd_ibge)
 
             # =====================================================
             # Percorrer feriados retornados pela API
             # =====================================================
             for feriado in dados_api:
-
                 dt_feriado = feriado["dt_feriado"]
                 nome = feriado["nome"]
                 tipo = feriado["tipo"]
-
                 tipo_normalizado = tipo.strip().lower()
 
                 # =================================================
                 # FERIADO NACIONAL
                 # =================================================
                 if tipo_normalizado == "nacional":
-
-                    chave = (
-                        dt_feriado,
-                        nome
-                    )
+                    chave = (dt_feriado,nome)
 
                     # Já processado nesta execução
                     if chave in feriados_nacionais:
                         continue
-
                     feriados_nacionais.add(chave)
-
                     cd_capital = 100
                     uf = "BR"
                     codigo_ibge = None
@@ -168,19 +151,13 @@ class Feriado(Model):
 
                     # UF do próprio estado
                     uf = capital.uf
-
-                    chave = (
-                        uf,
-                        dt_feriado,
-                        nome
-                    )
+                    chave = (uf, dt_feriado, nome)
 
                     # Já processado para esta UF
                     if chave in feriados_estaduais:
                         continue
 
                     feriados_estaduais.add(chave)
-
                     cd_capital = 101
                     codigo_ibge = None
 
@@ -188,7 +165,6 @@ class Feriado(Model):
                 # FERIADO MUNICIPAL
                 # =================================================
                 else:
-
                     cd_capital = capital.cd_capital
                     uf = capital.uf
                     codigo_ibge = str(capital.cd_ibge)
@@ -196,40 +172,31 @@ class Feriado(Model):
                 # =================================================
                 # Dados para gravação
                 # =================================================
-                dados = {
-                    "cd_capital": cd_capital,
-                    "id_api": feriado["id_api"],
-                    "dt_feriado": dt_feriado,
-                    "nome": nome,
-                    "tipo": tipo,
-                    "uf": uf,
-                    "codigo_ibge": codigo_ibge,
-                    "bancario": feriado["bancario"],
-                    "descricao": feriado["descricao"],
-                    "dt_atualizacao": datetime.now()
-                }
+                dados = {"cd_capital": cd_capital,
+                         "id_api": feriado["id_api"],
+                         "dt_feriado": dt_feriado,
+                         "nome": nome,
+                         "tipo": tipo,
+                         "uf": uf,
+                         "codigo_ibge": codigo_ibge,
+                         "bancario": feriado["bancario"],
+                         "descricao": feriado["descricao"],
+                         "dt_atualizacao": datetime.now()
+                        }
 
                 # =================================================
                 # INSERT / UPDATE
                 # =================================================
-                (
-                    Feriado
-                    .insert(**dados)
-                    .on_conflict(
-                        conflict_target=[
-                            Feriado.cd_capital,
-                            Feriado.id_api
-                        ],
-                        preserve=[
-                            Feriado.dt_feriado,
-                            Feriado.nome,
-                            Feriado.tipo,
-                            Feriado.uf,
-                            Feriado.codigo_ibge,
-                            Feriado.bancario,
-                            Feriado.descricao,
-                            Feriado.dt_atualizacao
-                        ]
-                    )
-                    .execute()
+                (Feriado.insert(**dados)
+                        .on_conflict(
+                         conflict_target=[Feriado.cd_capital, Feriado.id_api],
+                         preserve=[Feriado.dt_feriado,
+                                   Feriado.nome,
+                                   Feriado.tipo,
+                                   Feriado.uf,
+                                   Feriado.codigo_ibge,
+                                   Feriado.bancario,
+                                   Feriado.descricao,
+                                   Feriado.dt_atualizacao
+                                  ]).execute()
                 )

@@ -25,7 +25,7 @@ class Salario(Model):
         url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.1619/dados"
 
         parametros = {"formato": "json", "dataInicial": data_inicial, "dataFinal": data_final}
-        resposta = requests.get(url, params=parametros, timeout=10)
+        resposta = requests.get(url, params=parametros, timeout=30)
         resposta.raise_for_status()
         return resposta.json()
 

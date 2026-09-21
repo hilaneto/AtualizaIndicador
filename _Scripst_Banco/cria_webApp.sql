@@ -4,7 +4,6 @@
 -- ============================================================
 
 
-
 -- ============================================================
 -- TB_USUARIO
 -- ============================================================
@@ -22,12 +21,12 @@ CREATE TABLE tb_usuario (
 );
 
 --TRUNCATE TABLE tb_contato RESTART IDENTITY CASCADE;
-TRUNCATE TABLE tb_contato RESTART IDENTITY;
+--TRUNCATE TABLE tb_contato RESTART IDENTITY CASCADE;
 
 -- ============================================================
 -- TB_CONTATO
 -- ============================================================
-CREATE TABLE drop table tb_contato (
+CREATE TABLE tb_contato (
     cd_contato INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nm_contato VARCHAR(80) NOT NULL,
     email VARCHAR(120) NOT NULL,
@@ -74,8 +73,6 @@ CREATE TABLE IF NOT EXISTS public.tb_moeda
  CONSTRAINT ck_tb_moeda_codigo CHECK (char_length(moeda) IN (3, 5)),
  CONSTRAINT ck_tb_moeda_valor CHECK (valor >= 0)
 );
-
-
 
 -- ============================================================
 -- TB_IPCA
@@ -242,6 +239,64 @@ CONSTRAINT uq_tb_temperatura_capital_referencia UNIQUE (cd_capital, dt_referenci
 CONSTRAINT ck_tb_temperatura_valor CHECK (temperatura IS NULL OR temperatura BETWEEN -90 AND 70)
 );
 
+
+-- ============================================================
+-- View TEMPERATURA
+-- ============================================================
+CREATE OR REPLACE VIEW public.vw_temperatura_atual as
+
+SELECT a.cd_capital, b.cidade, b.uf, b.regiao, a.temperatura, a.dt_referencia
+FROM public.tb_temperatura a
+JOIN (SELECT cd_capital, MAX(dt_referencia) AS dt_referencia FROM public.tb_temperatura where status = True
+      GROUP BY cd_capital) c ON a.cd_capital = c.cd_capital AND a.dt_referencia = c.dt_referencia
+JOIN public.tb_capital b ON a.cd_capital = b.cd_capital
+WHERE a.cd_capital NOT IN (100, 101);
+
+
+SELECT cd_capital, MAX(dt_referencia) AS dt_referencia FROM public.tb_temperatura
+where status = True
+GROUP BY cd_capital
+
+
+select * from tb_temperatura;
+
+select * from tb_capital;
+
+select * from tb_capital;
+
+SELECT
+    cd_capital,
+    temperatura,
+    dt_referencia,
+    pg_typeof(dt_referencia)
+FROM tb_temperatura
+ORDER BY dt_referencia DESC
+LIMIT 10;
+
+SELECT cd_capital, MAX(dt_referencia) AS dt_referencia
+FROM public.tb_temperatura
+GROUP BY cd_capital
+
+select * from tb_temperatura
+where cd_capital = 16 and dt_referencia = '2026-09-21 12:00:00' 
+
+16	2026-09-21 12:00:00.319 -0300
+
+select * from tb_temperatura;
+
+
+==============================================================================================================
+cd_temperatura	cd_capital	temperatura	dt_referencia					dt_atualizacao					status
+85				25			28.80		2026-09-21 12:00:00.000 -0300	2026-09-21 12:35:28.520 -0300	true
+==============================================================================================================
+
+select * from tb_temperatura
+where cd_capital = 25
+
+
+DELETE FROM tb_temperatura
+WHERE temperatura IS NULL;
+
 -- ============================================================
 -- TB_FERIADO
 -- ============================================================
@@ -261,7 +316,7 @@ CONSTRAINT pk_tb_feriado PRIMARY KEY (cd_feriado),
 CONSTRAINT fk_tb_feriado_capital FOREIGN KEY (cd_capital)REFERENCES tb_capital (cd_capital),
 CONSTRAINT uq_tb_feriado_capital_api UNIQUE (cd_capital, id_api)
 );
-
+--TRUNCATE TABLE tb_feriado RESTART IDENTITY CASCADE;
 
 -- ============================================================
 -- ÍNDICES DE CONSULTA

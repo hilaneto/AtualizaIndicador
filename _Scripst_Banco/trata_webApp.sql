@@ -7,10 +7,10 @@ select * from tb_ipca;
 select * from tb_moeda;
 select * from tb_salariominimo;
 select * from tb_selic;
+select * from tb_ibovespa;
 select * from tb_temperatura;
 select * from tb_usuario;
 select * from tb_contato;
-select * from tb_ibovespa;
 select * from tb_logacesso;
 
 select * from tb_feriado
@@ -19,9 +19,6 @@ where uf = 'AC'
 select moeda, count(*) as qtd from tb_moeda
 group by moeda;
 
-SELECT * FROM tb_moeda
-WHERE status = true AND moeda IN ('USDC', 'USDV')
-ORDER BY dt_referencia DESC;
 
 SELECT DISTINCT ON (moeda) * 
 FROM tb_moeda, 
