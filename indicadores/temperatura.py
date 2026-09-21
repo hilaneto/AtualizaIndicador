@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from peewee import Model, AutoField, ForeignKeyField, DecimalField, DateTimeField, BooleanField, CharField
 from database.conexao import db, conectar
 
+
 # ==============================================================
 # CAPITAL
 # ==============================================================
@@ -17,6 +18,7 @@ class Capital(Model):
     class Meta:
         database = db
         table_name = "tb_capital"
+
 
 # ==============================================================
 # ESTAÇÃO DA CAPITAL
@@ -54,7 +56,6 @@ class Temperatura(Model):
     # ==========================================================
     @staticmethod
     def carregar_estacoes():
-
         with conectar():
             consulta = (EstacaoCapital
                         .select(EstacaoCapital.wigos, EstacaoCapital.capital)
@@ -62,6 +63,7 @@ class Temperatura(Model):
 
             estacoes = {registro.wigos: registro.capital.cd_capital
                         for registro in consulta}
+
         return estacoes
 
     # ==========================================================
@@ -70,14 +72,18 @@ class Temperatura(Model):
     @staticmethod
     def carregar_capitais():
         with conectar():
-            capitais = list(Capital.select())
+            capitais = list(
+                Capital.select()
+                .where(Capital.cd_capital.not_in([100, 101]))
+            )
+
         return capitais
 
     # ==========================================================
     # BUSCAR TEMPERATURAS
-    # ==========================================================@staticmethod
+    # ==========================================================
+    @staticmethod
     def buscar():
-
         estacoes = Temperatura.carregar_estacoes()
         capitais = Temperatura.carregar_capitais()
 
@@ -129,7 +135,7 @@ class Temperatura(Model):
 
             proximo = next(
                 (link.get("href") for link in dados.get("links", [])
-                if link.get("rel") == "next"),
+                 if link.get("rel") == "next"),
                 None
             )
 
@@ -139,23 +145,15 @@ class Temperatura(Model):
         if not observacoes:
             return []
 
-        # Última referência efetivamente disponibilizada pelo INMET
+        # Última hora efetivamente disponibilizada pelo INMET
         dt_referencia_atual = max(
             registro["dt_referencia"]
             for registro in observacoes
-        )
-
-        # Normaliza a referência
-        dt_referencia_atual = dt_referencia_atual.replace(
-            minute=0,
-            second=0,
-            microsecond=0
-        )
+        ).replace(minute=0, second=0, microsecond=0)
 
         temperaturas_capitais = {}
 
         for registro in observacoes:
-
             dt_referencia = registro["dt_referencia"].replace(
                 minute=0,
                 second=0,
@@ -178,7 +176,6 @@ class Temperatura(Model):
         resultado = []
 
         for capital in capitais:
-
             registro = temperaturas_capitais.get(capital.cd_capital)
 
             if registro:
@@ -191,34 +188,6 @@ class Temperatura(Model):
                     "status": False
                 })
 
-        return resultado
-            # ----------------------------------------------
-            # Próxima página da API
-            # ----------------------------------------------
-            proximo = next(
-                (link.get("href")
-                 for link in dados.get("links", [])
-                 if link.get("rel") == "next"),None)
-            
-            url = proximo
-            # A próxima URL já contém os parâmetros
-            parametros = None
-
-        # ======================================================
-        # GARANTIR AS 27 CAPITAIS NO RESULTADO
-        # ======================================================
-        resultado = []
-        for capital in capitais:
-            registro = temperaturas_capitais.get(capital.cd_capital)
-            if registro:
-                resultado.append(registro)
-            else:
-                resultado.append({
-                    "cd_capital": capital.cd_capital,
-                    "temperatura": None,
-                    "dt_referencia": dt_execucao,
-                    "status": False
-                })
         return resultado
 
     # ==========================================================
@@ -240,19 +209,13 @@ class Temperatura(Model):
                      status=registro["status"]
                  )
                  .on_conflict(
-                     conflict_target=[
-                         Temperatura.capital,
-                         Temperatura.dt_referencia
-                     ],
+                     conflict_target=[Temperatura.capital, Temperatura.dt_referencia],
                      update={
-                         Temperatura.temperatura:
-                             registro["temperatura"],
-
-                         Temperatura.dt_atualizacao:
-                             agora,
-
-                         Temperatura.status:
-                             registro["status"]
-                     }).execute())
+                         Temperatura.temperatura: registro["temperatura"],
+                         Temperatura.dt_atualizacao: agora,
+                         Temperatura.status: registro["status"]
+                     }
+                 )
+                 .execute())
 
         return len(temperaturas)
