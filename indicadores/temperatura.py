@@ -32,6 +32,7 @@ class EstacaoCapital(Model):
         database = db
         table_name = "tb_estacao_capital"
 
+
 # ==============================================================
 # TEMPERATURA
 # ==============================================================
@@ -55,12 +56,12 @@ class Temperatura(Model):
     def carregar_estacoes():
 
         with conectar():
-            consulta = (EstacaoCapital.select(EstacaoCapital.wigos,
-                        EstacaoCapital.capital).where(EstacaoCapital.status == True))
+            consulta = (EstacaoCapital
+                        .select(EstacaoCapital.wigos, EstacaoCapital.capital)
+                        .where(EstacaoCapital.status == True))
 
-            estacoes = {registro.wigos:registro.capital.cd_capital
+            estacoes = {registro.wigos: registro.capital.cd_capital
                         for registro in consulta}
-
         return estacoes
 
     # ==========================================================
@@ -68,10 +69,8 @@ class Temperatura(Model):
     # ==========================================================
     @staticmethod
     def carregar_capitais():
-
         with conectar():
             capitais = list(Capital.select())
-
         return capitais
 
     # ==========================================================
@@ -79,18 +78,24 @@ class Temperatura(Model):
     # ==========================================================
     @staticmethod
     def buscar():
+
         estacoes = Temperatura.carregar_estacoes()
         capitais = Temperatura.carregar_capitais()
-
         agora = datetime.now(timezone.utc)
+
+        # Hora de referência da execução
+        # Ex.: 13:32:48 -> 13:00:00
+        dt_execucao = agora.replace(minute=0, second=0, microsecond=0)
 
         # Janela de busca no INMET
         inicio = agora - timedelta(hours=24)
-
         url = ("https://wis2bra.inmet.gov.br/oapi/collections/urn:wmo:md:br-inmet:synop/items")
 
-        parametros = {"f": "json", "limit": 1000, "datetime": (f"{inicio.isoformat()}/" f"{agora.isoformat()}")}
-
+        parametros = {
+            "f": "json",
+            "limit": 1000,
+            "datetime": f"{inicio.isoformat()}/{agora.isoformat()}"
+        }
         temperaturas_capitais = {}
 
         while url:
@@ -99,43 +104,61 @@ class Temperatura(Model):
             dados = resposta.json()
 
             for observacao in dados.get("features", []):
-                propriedades = observacao.get("properties", {})
+                propriedades = observacao.get("properties",{})
 
                 # ----------------------------------------------
                 # Apenas temperatura do ar
                 # ----------------------------------------------
-                if (propriedades.get("name") != "air_temperature"):
+                if propriedades.get("name") != "air_temperature":
                     continue
 
                 wigos = propriedades.get("wigos_station_identifier")
 
-                # Descobre a qual capital
-                # pertence a estação
+                # Descobre a qual capital pertence a estação
                 cd_capital = estacoes.get(wigos)
 
                 if cd_capital is None:
                     continue
 
                 valor = propriedades.get("value")
+                dt_referencia = propriedades.get("phenomenonTime"                )
 
-                dt_referencia = propriedades.get("phenomenonTime")
-
-                if (valor is None or not dt_referencia):
+                if valor is None or not dt_referencia:
                     continue
-                dt_referencia = (datetime.fromisoformat(dt_referencia.replace("Z", "+00:00")))
-                temperatura_atual = (temperaturas_capitais.get(cd_capital))
 
                 # ----------------------------------------------
-                # Mantém apenas a observação mais recente
-                # de cada capital
+                # Converte data retornada pelo INMET
                 # ----------------------------------------------
-                if (temperatura_atual is None
+                dt_referencia = datetime.fromisoformat(dt_referencia.replace("Z", "+00:00"))
+
+                # Normaliza para hora cheia
+                dt_referencia = dt_referencia.replace(minute=0, second=0, microsecond=0)
+
+                # ----------------------------------------------
+                # Considera somente a hora atual
+                # ----------------------------------------------
+                if dt_referencia != dt_execucao:
+                    continue
+
+                temperatura_atual = temperaturas_capitais.get(
+                    cd_capital
+                )
+
+                # ----------------------------------------------
+                # Mantém a observação da capital
+                # ----------------------------------------------
+                if (
+                    temperatura_atual is None
                     or
-                    dt_referencia > temperatura_atual["dt_referencia"]):
-                    temperaturas_capitais[cd_capital] = {"cd_capital":cd_capital,
-                         "temperatura":valor,
-                         "dt_referencia":dt_referencia,
-                         "status":True}
+                    dt_referencia
+                    > temperatura_atual["dt_referencia"]
+                ):
+                    temperaturas_capitais[cd_capital] = {
+                        "cd_capital": cd_capital,
+                        "temperatura": valor,
+                        "dt_referencia": dt_referencia,
+                        "status": True
+                    }
 
             # ----------------------------------------------
             # Próxima página da API
@@ -144,10 +167,9 @@ class Temperatura(Model):
                 (link.get("href")
                  for link in dados.get("links", [])
                  if link.get("rel") == "next"),None)
+            
             url = proximo
-
-            # A URL da próxima página já
-            # contém os parâmetros
+            # A próxima URL já contém os parâmetros
             parametros = None
 
         # ======================================================
@@ -155,14 +177,16 @@ class Temperatura(Model):
         # ======================================================
         resultado = []
         for capital in capitais:
-            registro = (temperaturas_capitais.get(capital.cd_capital))
+            registro = temperaturas_capitais.get(capital.cd_capital)
             if registro:
                 resultado.append(registro)
             else:
-                resultado.append({"cd_capital":capital.cd_capital,
-                                  "temperatura":None,
-                                  "dt_referencia":agora,
-                                  "status":False})
+                resultado.append({
+                    "cd_capital": capital.cd_capital,
+                    "temperatura": None,
+                    "dt_referencia": dt_execucao,
+                    "status": False
+                })
         return resultado
 
     # ==========================================================
@@ -170,17 +194,33 @@ class Temperatura(Model):
     # ==========================================================
     @staticmethod
     def atualizar_temperatura():
-        temperaturas = (Temperatura.buscar())
+        temperaturas = Temperatura.buscar()
         agora = datetime.now()
+
         with conectar():
             for registro in temperaturas:
-                (Temperatura.insert(capital=registro["cd_capital"],
-                            temperatura=registro["temperatura"],
-                            dt_referencia=registro["dt_referencia"],
-                            dt_atualizacao=agora,
-                            status=registro["status"])
-                            .on_conflict(conflict_target=[Temperatura.capital,Temperatura.dt_referencia],
-                            update={Temperatura.temperatura:registro["temperatura"],
-                                    Temperatura.dt_atualizacao:agora,
-                                    Temperatura.status:registro["status"]}).execute())
+                (Temperatura
+                 .insert(
+                     capital=registro["cd_capital"],
+                     temperatura=registro["temperatura"],
+                     dt_referencia=registro["dt_referencia"],
+                     dt_atualizacao=agora,
+                     status=registro["status"]
+                 )
+                 .on_conflict(
+                     conflict_target=[
+                         Temperatura.capital,
+                         Temperatura.dt_referencia
+                     ],
+                     update={
+                         Temperatura.temperatura:
+                             registro["temperatura"],
+
+                         Temperatura.dt_atualizacao:
+                             agora,
+
+                         Temperatura.status:
+                             registro["status"]
+                     }).execute())
+
         return len(temperaturas)
