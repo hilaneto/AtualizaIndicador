@@ -50,6 +50,44 @@ where cd_capital = 3
 
 select * from vw_temperatura_atual;
 
+select * from tb_temperatura;
+
+SELECT
+    cd_capital,
+    cidade,
+    temperatura,
+    temperatura_exibicao,
+    status
+FROM vw_temperatura_atual
+ORDER BY cd_capital;
+
+
+
+SELECT
+    b.cd_capital,
+    b.cidade,
+    t.temperatura,
+    t.dt_referencia,
+    t.dt_atualizacao,
+    t.status
+FROM tb_temperatura t
+JOIN tb_capital b ON b.cd_capital = t.cd_capital
+ORDER BY t.dt_referencia DESC, b.cidade
+LIMIT 100;
+
+
+SELECT
+    dt_referencia,
+    COUNT(*) AS registros,
+    COUNT(temperatura) AS com_temperatura,
+    COUNT(*) - COUNT(temperatura) AS sem_temperatura
+FROM tb_temperatura
+GROUP BY dt_referencia
+ORDER BY dt_referencia DESC
+LIMIT 10;
+
+
+
 select max(dt_atualizacao) from tb_temperatura
 
 select * from tb_capital;
