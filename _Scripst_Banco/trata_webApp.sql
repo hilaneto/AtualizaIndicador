@@ -3,10 +3,21 @@
 select * from tb_capital; 			-- popular manualmente
 select * from tb_estacao_capital; 	-- popular manualmente
 select * from tb_feriado; 			-- popular manualmente
+
 select * from tb_ipca;
+TRUNCATE TABLE tb_ipca RESTART IDENTITY CASCADE;
+
+select * from tb_igpm;
+TRUNCATE TABLE tb_igpm RESTART IDENTITY CASCADE;
+
+
+select * from tb_selic;
+TRUNCATE TABLE tb_selic RESTART IDENTITY CASCADE;
+
 select * from tb_moeda;
 select * from tb_salariominimo;
 select * from tb_selic;
+
 select * from tb_ibovespa;
 select * from tb_temperatura;
 select * from tb_usuario;
@@ -50,7 +61,12 @@ where cd_capital = 3
 
 select * from vw_temperatura_atual;
 
+select * from vw_temperatura_atual
+where temperatura is null;
+-- 8 nulas
+
 select * from tb_temperatura;
+
 
 SELECT
     cd_capital,

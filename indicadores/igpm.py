@@ -4,8 +4,8 @@ from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, Boo
 from database.conexao import db, conectar
 from decimal import Decimal
 
-class Ipca(Model):
-    cd_ipca = AutoField()
+class Igpm(Model):
+    cd_igpm = AutoField()
     indice = DecimalField(max_digits=8, decimal_places=5)
     status = BooleanField(default=True, null=False)
     dt_referencia = DateField(null=False)
@@ -13,18 +13,18 @@ class Ipca(Model):
 
     class Meta:
         database = db
-        table_name = "tb_ipca"
+        table_name = "tb_igpm"
 
     @staticmethod
     def buscar(ultimos=12):
-        url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados/ultimos/{ultimos}?formato=json"
+        url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.189/dados/ultimos/{ultimos}?formato=json"
         resposta = requests.get(url, timeout=10)
-        resposta.raise_for_status()  # Valida a resposta HTTP; se houver erro, não deixa o código continuar.
+        resposta.raise_for_status()
         return resposta.json()
 
     @staticmethod
-    def atualizar_ipca():
-        dados = Ipca.buscar(12)
+    def atualizar_igpm():
+        dados = Igpm.buscar(12)
         if not dados:
             return
 
@@ -32,4 +32,4 @@ class Ipca(Model):
             for registro in dados:
                 indice = Decimal(registro["valor"])
                 dt_referencia = datetime.strptime(registro["data"], "%d/%m/%Y").date()
-                Ipca.insert(indice=indice, status=True, dt_referencia=dt_referencia).on_conflict_ignore().execute()
+                Igpm.insert(indice=indice, status=True, dt_referencia=dt_referencia).on_conflict_ignore().execute()

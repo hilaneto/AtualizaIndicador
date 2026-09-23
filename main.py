@@ -5,6 +5,7 @@ from indicadores.euro import Euro
 from indicadores.bitcoin import Bitcoin
 from indicadores.ipca import Ipca
 from indicadores.selic import Selic
+from indicadores.igpm import Igpm
 from indicadores.salario import Salario
 from indicadores.temperatura import Temperatura
 from indicadores.feriado import Feriado
@@ -34,9 +35,10 @@ def atualizar_seg_sex():
     executar_atualizacao("Euro", Euro.atualizar_euro)
     executar_atualizacao("IPCA", Ipca.atualizar_ipca)
     executar_atualizacao("Selic", Selic.atualizar_selic)
+    executar_atualizacao("Igpm", Igpm.atualizar_igpm)
     executar_atualizacao("Salário mínimo", Salario.atualizar_salario)
     executar_atualizacao("Ibovespa", Ibovespa.atualizar_ibovespa)
-
+    
 def atualizar_24h7():
     executar_atualizacao("Bitcoin", Bitcoin.atualizar_bitcoin)
     executar_atualizacao("Temperatura", Temperatura.atualizar_temperatura)

@@ -2,7 +2,6 @@ import requests
 from datetime import datetime, timedelta
 from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, BooleanField
 from database.conexao import db, conectar
-from decimal import Decimal
 
 class Selic(Model):
     cd_selic = AutoField()
@@ -15,64 +14,49 @@ class Selic(Model):
         database = db
         table_name = "tb_selic"
 
+
     @staticmethod
     def buscar():
         hoje = datetime.now()
-        data_inicial = (hoje - timedelta(days=600)).strftime("%d/%m/%Y")
+        data_inicial = (hoje - timedelta(days=365)).strftime("%d/%m/%Y")
         data_final = hoje.strftime("%d/%m/%Y")
 
-        # API Banco Central ---------------------------------------------
-        url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados"
+        url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados?formato=json&dataInicial={data_inicial}&dataFinal={data_final}"
 
-        parametros = {"formato": "json", "dataInicial": data_inicial, "dataFinal": data_final}
-        resposta = requests.get(url, params=parametros, timeout=10)
+        # Gera dados brutos
+        resposta = requests.get(url, timeout=10)
         resposta.raise_for_status()
-        return resposta.json()
+        dados_brutos = resposta.json() # lista de dicionários
+        return dados_brutos
+
+
+    @staticmethod
+    def transformar():
+        # Exlui duplicidade diária
+        dados_selic = []
+        valor_anterior = None
+        dados_brutos = Selic.buscar()
+        for registro in dados_brutos:
+            if registro["valor"] != valor_anterior:
+                dados_selic.append(registro)
+                valor_anterior = registro["valor"]
+
+        # Transforma dados para o formato da tabela Selic
+        registro_selic=[]
+        for registro in dados_selic:
+            registro_selic.append({"indice": registro["valor"],
+                                   "status": True,
+                                   "dt_referencia": datetime.strptime(registro["data"], "%d/%m/%Y").date()
+                                  })
+        return registro_selic
+
 
     @staticmethod
     def atualizar_selic():
-        dados = Selic.buscar()
+        dados = Selic.transformar()
 
         if not dados:
             return
 
-        registro = dados[-1]
-
-        valor_api = Decimal(registro["valor"])
-        data_api = datetime.strptime(
-            registro["data"], "%d/%m/%Y"
-        ).date()
-
         with conectar():
-
-            ultimo = (
-                Selic
-                .select()
-                .where(Selic.status == True)
-                .order_by(Selic.dt_referencia.desc())
-                .first()
-            )
-
-            # Primeira carga
-            if ultimo is None:
-                Selic.create(
-                    indice=valor_api,
-                    status=True,
-                    dt_referencia=data_api,
-                    dt_atualizacao=datetime.now()
-                )
-
-            # Mesma Selic: prolonga a vigência
-            elif ultimo.indice == valor_api:
-                ultimo.dt_referencia = data_api
-                ultimo.dt_atualizacao = datetime.now()
-                ultimo.save()
-
-            # Selic mudou: inicia nova vigência
-            else:
-                Selic.create(
-                    indice=valor_api,
-                    status=True,
-                    dt_referencia=data_api,
-                    dt_atualizacao=datetime.now()
-                )
+            Selic.insert_many(dados).on_conflict_ignore().execute()            
