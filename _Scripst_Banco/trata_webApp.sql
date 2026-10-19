@@ -10,7 +10,7 @@ select * from tb_feriado; 			-- popular manualmente
 select * from tb_ipca;
 select * from tb_inpc;
 select * from tb_cdi;
-select * from tb_tir;
+select * from tb_tr;
 select * from tb_igpm;
 select * from tb_selic;
 select * from tb_moeda;

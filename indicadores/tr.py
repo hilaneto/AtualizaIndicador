@@ -4,8 +4,8 @@ from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, Boo
 from database.conexao import db, conectar
 from decimal import Decimal
 
-class Tir(Model):
-    cd_tir = AutoField()
+class Tr(Model):
+    cd_tr = AutoField()
     indice = DecimalField(max_digits=8, decimal_places=5)
     status = BooleanField(default=True, null=False)
     dt_referencia = DateField(null=False)
@@ -13,7 +13,7 @@ class Tir(Model):
 
     class Meta:
         database = db
-        table_name = "tb_tir"
+        table_name = "tb_tr"
 
     @staticmethod
     def buscar(ultimos=6):
@@ -23,8 +23,8 @@ class Tir(Model):
         return resposta.json()
 
     @staticmethod
-    def atualizar_tir():
-        dados = Tir.buscar(6)
+    def atualizar_tr():
+        dados = Tr.buscar(6)
         if not dados:
             return
 
@@ -32,4 +32,4 @@ class Tir(Model):
             for registro in dados:
                 indice = Decimal(registro["valor"])
                 dt_referencia = datetime.strptime(registro["data"], "%d/%m/%Y").date()
-                Tir.insert(indice=indice, status=True, dt_referencia=dt_referencia).on_conflict_ignore().execute()
+                Tr.insert(indice=indice, status=True, dt_referencia=dt_referencia).on_conflict_ignore().execute()
