@@ -1,0 +1,35 @@
+import requests
+from datetime import datetime
+from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, BooleanField
+from database.conexao import db, conectar
+from decimal import Decimal
+
+class Tir(Model):
+    cd_tir = AutoField()
+    indice = DecimalField(max_digits=8, decimal_places=5)
+    status = BooleanField(default=True, null=False)
+    dt_referencia = DateField(null=False)
+    dt_atualizacao = DateTimeField(default=datetime.now, null=False)
+
+    class Meta:
+        database = db
+        table_name = "tb_tir"
+
+    @staticmethod
+    def buscar(ultimos=6):
+        url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.4391/dados/ultimos/{ultimos}?formato=json"
+        resposta = requests.get(url, timeout=10)
+        resposta.raise_for_status()  # Valida a resposta HTTP; se houver erro, não deixa o código continuar.
+        return resposta.json()
+
+    @staticmethod
+    def atualizar_tir():
+        dados = Tir.buscar(6)
+        if not dados:
+            return
+
+        with conectar():
+            for registro in dados:
+                indice = Decimal(registro["valor"])
+                dt_referencia = datetime.strptime(registro["data"], "%d/%m/%Y").date()
+                Tir.insert(indice=indice, status=True, dt_referencia=dt_referencia).on_conflict_ignore().execute()
