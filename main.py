@@ -6,6 +6,7 @@ from indicadores.bitcoin import Bitcoin
 from indicadores.ipca import Ipca
 from indicadores.inpc import Inpc
 from indicadores.cdi import Cdi
+from indicadores.tir import Tir
 from indicadores.selic import Selic
 from indicadores.igpm import Igpm
 from indicadores.salario import Salario
@@ -38,6 +39,7 @@ def atualizar_seg_sex():
     executar_atualizacao("IPCA", Ipca.atualizar_ipca)
     executar_atualizacao("INPC", Inpc.atualizar_inpc)
     executar_atualizacao("CDI", Cdi.atualizar_cdi)
+    executar_atualizacao("TIR", Tir.atualizar_tir)
     executar_atualizacao("Selic", Selic.atualizar_selic)
     executar_atualizacao("Igpm", Igpm.atualizar_igpm)
     executar_atualizacao("Salário mínimo", Salario.atualizar_salario)
