@@ -1,34 +1,48 @@
 
 
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+
+
 select * from tb_capital; 			-- popular manualmente
 select * from tb_estacao_capital; 	-- popular manualmente
 select * from tb_feriado; 			-- popular manualmente
-
 select * from tb_ipca;
-TRUNCATE TABLE tb_ipca RESTART IDENTITY CASCADE;
-
 select * from tb_igpm;
-TRUNCATE TABLE tb_igpm RESTART IDENTITY CASCADE;
-
-
 select * from tb_selic;
-TRUNCATE TABLE tb_selic RESTART IDENTITY CASCADE;
-
 select * from tb_moeda;
 select * from tb_salariominimo;
 select * from tb_selic;
-
 select * from tb_ibovespa;
 select * from tb_temperatura;
 select * from tb_usuario;
 select * from tb_contato;
 select * from tb_logacesso;
 
+
+--TRUNCATE TABLE tb_ipca  RESTART IDENTITY CASCADE;
+--TRUNCATE TABLE tb_selic RESTART IDENTITY CASCADE;
+--TRUNCATE TABLE tb_igpm  RESTART IDENTITY CASCADE;
+
 select * from tb_feriado
 where uf = 'AC'
 
 select moeda, count(*) as qtd from tb_moeda
 group by moeda;
+
+
+-- IGPM ------------------------------------
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'tb_igpm'
+ORDER BY ordinal_position;
+
+SELECT *
+FROM tb_igpm
+ORDER BY dt_referencia DESC
+LIMIT 5;
+
 
 
 SELECT DISTINCT ON (moeda) * 
