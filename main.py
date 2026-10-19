@@ -6,7 +6,7 @@ from indicadores.bitcoin import Bitcoin
 from indicadores.ipca import Ipca
 from indicadores.inpc import Inpc
 from indicadores.cdi import Cdi
-from indicadores.tr import Tir
+from indicadores.tr import Tr
 from indicadores.selic import Selic
 from indicadores.igpm import Igpm
 from indicadores.salario import Salario
