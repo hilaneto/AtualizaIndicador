@@ -17,7 +17,7 @@ class Tir(Model):
 
     @staticmethod
     def buscar(ultimos=6):
-        url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.4391/dados/ultimos/{ultimos}?formato=json"
+        url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.7811/dados/ultimos/{ultimos}?formato=json"
         resposta = requests.get(url, timeout=10)
         resposta.raise_for_status()  # Valida a resposta HTTP; se houver erro, não deixa o código continuar.
         return resposta.json()
