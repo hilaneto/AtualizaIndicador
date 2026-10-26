@@ -1,61 +1,50 @@
 
 
 SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'public'
+WHERE table_schema = 'public';
 
+
+select * from tb_indicador_info;
 
 select * from tb_capital; 			-- popular manualmente
 select * from tb_estacao_capital; 	-- popular manualmente
 select * from tb_feriado; 			-- popular manualmente
-select * from tb_ipca;
-select * from tb_inpc;
-select * from tb_cdi;
-
-select * from tb_tr;
-select * from tb_pib_variacao;
-select * from tb_pib_valores;
-select * from tb_populacao;
-
-TRUNCATE TABLE tb_tr RESTART IDENTITY CASCADE;
-
-select * from tb_igpm;
-select * from tb_selic;
-select * from tb_moeda;
-select * from tb_salariominimo;
-select * from tb_selic;
-select * from tb_ibovespa;
-select * from tb_temperatura;
 select * from tb_contato;
-select * from tb_logacesso;
-
 select * from tb_indicador_info;
 
-SELECT column_name, data_type, character_maximum_length
-FROM information_schema.columns
-WHERE table_name = 'tb_indicador_info'
-ORDER BY ordinal_position;
-
-UPDATE tb_indicador_info
-SET fonte = 'AwesomeAPI', dt_atualizacao = CURRENT_TIMESTAMP
-WHERE nm_indicador IN ('DOLAR_TURISMO', 'EURO', 'BITCOIN');
-
 select * from tb_copom;
-
-SELECT cd_pib, indice, dt_referencia
-FROM tb_pib
-ORDER BY dt_referencia DESC
-LIMIT 5;
+select * from tb_logacesso;
+select * from vw_temperatura_atual;
 
 
-SELECT indice, dt_referencia FROM tb_ipca
-WHERE status = TRUE
-ORDER BY dt_referencia desc
-limit 12;
-    
+-- tabelas indicadores únicas ------------------------
+select * from tb_moeda;
+select * from tb_ibovespa;
+select * from tb_temperatura;
+select * from tb_pib_valores;
+-- tabela indicadores unificada ----------------------
+select * from tb_ipca
+union all
+select * from tb_selic
+union all
+select * from tb_inpc
+union all
+select * from tb_cdi
+union all
+select * from tb_tr
+union all
+select * from tb_igpm
+union all
+select * from tb_pib_variacao
+union all
+select * from tb_populacao
+union all
+select * from tb_salariominimo;
 
-SELECT ROUND(((EXP(SUM(LN(1 + indice / 100.0))) - 1) * 100)::numeric, 2) AS inflacao_12m FROM tb_ipca
 
-SELECT SUM(indice) AS inflacao_12m FROM tb_ipca
+
+--TRUNCATE TABLE tb_tr RESTART IDENTITY CASCADE;
+--TRUNCATE TABLE tb_tr RESTART IDENTITY;
 
 -- Inflação -----------------------------------------
 WITH ultimos AS (
@@ -72,7 +61,6 @@ FROM ultimos
 HAVING COUNT(*) = 12;
 
 
---TRUNCATE TABLE tb_indicador_info RESTART IDENTITY;
 
 INSERT INTO tb_indicador_info
 (nm_indicador, titulo, descricao, periodicidade, fonte, url_fonte)

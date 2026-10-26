@@ -1,35 +1,35 @@
 import requests
 from datetime import datetime
-from peewee import Model, AutoField, DecimalField, DateTimeField, DateField, BooleanField
-from database.conexao import db, conectar
 from decimal import Decimal
+from database.conexao import conectar
+from indicadores.indicador import Indicador, IndicadorInfo
 
-class Igpm(Model):
-    cd_igpm = AutoField()
-    indice = DecimalField(max_digits=8, decimal_places=5)
-    status = BooleanField(default=True, null=False)
-    dt_referencia = DateField(null=False)
-    dt_atualizacao = DateTimeField(default=datetime.now, null=False)
 
-    class Meta:
-        database = db
-        table_name = "tb_igpm"
+class Igpm:
 
     @staticmethod
     def buscar(ultimos=12):
         url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.189/dados/ultimos/{ultimos}?formato=json"
-        resposta = requests.get(url, timeout=10)
+        resposta = requests.get(url, timeout=30)
         resposta.raise_for_status()
         return resposta.json()
 
     @staticmethod
-    def atualizar_igpm():
+    def atualizar():
         dados = Igpm.buscar(12)
         if not dados:
             return
 
         with conectar():
+            indicador = IndicadorInfo.get(IndicadorInfo.nm_indicador == "IGPM")
+
             for registro in dados:
-                indice = Decimal(registro["valor"])
+                valor = Decimal(registro["valor"])
                 dt_referencia = datetime.strptime(registro["data"], "%d/%m/%Y").date()
-                Igpm.insert(indice=indice, status=True, dt_referencia=dt_referencia).on_conflict_ignore().execute()
+
+                Indicador.insert(
+                    cd_indicador=indicador.cd_indicador,
+                    valor=valor,
+                    status=True,
+                    dt_referencia=dt_referencia
+                ).on_conflict_ignore().execute()
