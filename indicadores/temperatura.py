@@ -1,3 +1,4 @@
+
 import requests
 from datetime import datetime, timezone, timedelta
 from peewee import Model, AutoField, ForeignKeyField, DecimalField, DateTimeField, BooleanField, CharField
@@ -88,7 +89,8 @@ class Temperatura(Model):
         capitais = Temperatura.carregar_capitais()
 
         agora = datetime.now(timezone.utc)
-        inicio = agora - timedelta(hours=24)
+        #inicio = agora - timedelta(hours=24)
+        inicio = agora - timedelta(hours=3)
 
         url = "https://wis2bra.inmet.gov.br/oapi/collections/urn:wmo:md:br-inmet:synop/items"
 
@@ -101,6 +103,7 @@ class Temperatura(Model):
         observacoes = []
 
         while url:
+
             resposta = requests.get(url, params=parametros, timeout=30)
             resposta.raise_for_status()
             dados = resposta.json()

@@ -13,6 +13,10 @@ from indicadores.salario import Salario
 from indicadores.temperatura import Temperatura
 from indicadores.feriado import Feriado
 from indicadores.ibovespa import Ibovespa
+from indicadores.pib_variacao import Pib_Variacao
+from indicadores.pib_valores import Pib_Valores
+from indicadores.populacao import Populacao
+
 
 # Log: arquivo no diretório de trabalho do programa
 logging.basicConfig(filename="atualizador.log",
@@ -52,6 +56,11 @@ def atualizar_24h7():
 def atualizar_anual():
     executar_atualizacao("Feriados", Feriado.atualizar_feriado)
 
+def atualizar_ibge():
+    executar_atualizacao("PIB - Variação", Pib_Variacao.atualizar)
+    executar_atualizacao("PIB - Valores", Pib_Valores.atualizar)
+    executar_atualizacao("População", Populacao.atualizar)
+
 def main():
     scheduler = BlockingScheduler(timezone="America/Sao_Paulo")
 
@@ -64,6 +73,9 @@ def main():
     # Feriados: 31 de dezembro, às 08:00
     scheduler.add_job(atualizar_anual, trigger="cron", month=12, day=31, hour=8, minute=0,)
 
+    # PIB e População: primeiro dia de cada mês, às 08:15
+    scheduler.add_job(atualizar_ibge, trigger="cron", day=1, hour=8, minute=15)
+
     try:
         logger.info("Programa iniciado.")
         logger.info("Executando atualizações iniciais.")
@@ -75,6 +87,8 @@ def main():
         logger.info("Indicadores: seg-sex, das 08:00 às 19:30.")
         logger.info("Bitcoin e temperatura: 24/7, a cada 30 minutos.")
         logger.info("Feriados: 31/12, às 08:00.")
+
+        logger.info("PIB e População: dia 1 de cada mês, às 08:15.")
 
         scheduler.start()
 

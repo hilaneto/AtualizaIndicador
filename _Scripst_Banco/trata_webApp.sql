@@ -12,6 +12,9 @@ select * from tb_inpc;
 select * from tb_cdi;
 
 select * from tb_tr;
+select * from tb_pib_variacao;
+select * from tb_pib_valores;
+select * from tb_populacao;
 
 TRUNCATE TABLE tb_tr RESTART IDENTITY CASCADE;
 
@@ -22,14 +25,131 @@ select * from tb_salariominimo;
 select * from tb_selic;
 select * from tb_ibovespa;
 select * from tb_temperatura;
-select * from tb_usuario;
 select * from tb_contato;
 select * from tb_logacesso;
 
+select * from tb_indicador_info;
 
---TRUNCATE TABLE tb_ipca  RESTART IDENTITY CASCADE;
---TRUNCATE TABLE tb_selic RESTART IDENTITY CASCADE;
---TRUNCATE TABLE tb_igpm  RESTART IDENTITY CASCADE;
+SELECT column_name, data_type, character_maximum_length
+FROM information_schema.columns
+WHERE table_name = 'tb_indicador_info'
+ORDER BY ordinal_position;
+
+UPDATE tb_indicador_info
+SET fonte = 'AwesomeAPI', dt_atualizacao = CURRENT_TIMESTAMP
+WHERE nm_indicador IN ('DOLAR_TURISMO', 'EURO', 'BITCOIN');
+
+select * from tb_copom;
+
+SELECT cd_pib, indice, dt_referencia
+FROM tb_pib
+ORDER BY dt_referencia DESC
+LIMIT 5;
+
+
+SELECT indice, dt_referencia FROM tb_ipca
+WHERE status = TRUE
+ORDER BY dt_referencia desc
+limit 12;
+    
+
+SELECT ROUND(((EXP(SUM(LN(1 + indice / 100.0))) - 1) * 100)::numeric, 2) AS inflacao_12m FROM tb_ipca
+
+SELECT SUM(indice) AS inflacao_12m FROM tb_ipca
+
+-- Inflação -----------------------------------------
+WITH ultimos AS (
+    SELECT indice, dt_referencia
+    FROM tb_ipca
+    WHERE status = TRUE
+    ORDER BY dt_referencia DESC
+    LIMIT 12)
+select * from ultimos    
+    
+SELECT MAX(dt_referencia) AS dt_referencia,
+ROUND(((EXP(SUM(LN(1 + indice / 100.0))) - 1) * 100)::numeric, 2) AS inflacao_12m
+FROM ultimos
+HAVING COUNT(*) = 12;
+
+
+--TRUNCATE TABLE tb_indicador_info RESTART IDENTITY;
+
+INSERT INTO tb_indicador_info
+(nm_indicador, titulo, descricao, periodicidade, fonte, url_fonte)
+VALUES
+('DOLAR_COMERCIAL', 'Dólar Comercial',
+ 'Cotação do dólar utilizada em operações comerciais e financeiras, como importações, exportações e transações entre instituições. Os valores de compra e venda são apresentados em reais (R$).',
+ 'Dias úteis', 'Banco Central do Brasil', 'https://www.bcb.gov.br'),
+('DOLAR_TURISMO', 'Dólar Turismo',
+ 'Cotação do dólar utilizada como referência em operações de turismo, como compra de moeda estrangeira para viagens. Os valores de compra e venda são apresentados em reais (R$) e podem variar conforme a instituição.',
+ 'Dias úteis', 'Fonte de cotações cambiais', NULL),
+('EURO', 'Euro',
+ 'Cotação do euro em relação ao real (EUR/BRL). O euro é a moeda oficial de grande parte dos países da União Europeia e sua cotação varia conforme o mercado de câmbio.',
+ 'Dias úteis', 'Fonte de cotações cambiais', NULL),
+('BITCOIN', 'Bitcoin',
+ 'Cotação do Bitcoin (BTC), criptoativo digital negociado em mercados globais. Seu preço apresenta oscilações frequentes, inclusive aos finais de semana e feriados.',
+ 'Contínua', 'Mercado de criptoativos', NULL),
+('IPCA', 'Índice Nacional de Preços ao Consumidor Amplo',
+ 'Principal indicador da inflação oficial brasileira, calculado pelo IBGE. Mede a variação dos preços de produtos e serviços consumidos por famílias com rendimentos de 1 a 40 salários mínimos.',
+ 'Mensal', 'IBGE', 'https://www.ibge.gov.br'),
+('INPC', 'Índice Nacional de Preços ao Consumidor',
+ 'Indicador de inflação calculado pelo IBGE, que acompanha a variação dos preços de produtos e serviços consumidos por famílias com rendimentos de 1 a 5 salários mínimos.',
+ 'Mensal', 'IBGE', 'https://www.ibge.gov.br'),
+('IGPM', 'Índice Geral de Preços - Mercado',
+ 'Indicador de inflação calculado pela Fundação Getulio Vargas (FGV). Acompanha variações de preços em diferentes etapas da economia e é frequentemente utilizado no reajuste de contratos, incluindo aluguéis.',
+ 'Mensal', 'FGV IBRE', 'https://portalibre.fgv.br'),
+('IBOVESPA', 'Ibovespa',
+ 'Principal índice de referência do mercado brasileiro de ações. Representa o desempenho de uma carteira teórica composta por ações e outros ativos de maior representatividade negociados na B3.',
+ 'Dias de negociação', 'B3', 'https://www.b3.com.br'),
+('SELIC', 'Taxa Selic',
+ 'Taxa básica de juros da economia brasileira, definida pelo Comitê de Política Monetária (Copom) do Banco Central. Influencia os juros de empréstimos, financiamentos e investimentos.',
+ 'Conforme Copom', 'Banco Central do Brasil', 'https://www.bcb.gov.br'),
+('CDI', 'Taxa CDI',
+ 'Taxa de referência baseada nas operações de empréstimo de curtíssimo prazo entre instituições financeiras. É amplamente utilizada como referência de rentabilidade em investimentos de renda fixa.',
+ 'Dias úteis', 'B3', 'https://www.b3.com.br'),
+('TR', 'Taxa Referencial',
+ 'Taxa calculada pelo Banco Central do Brasil, utilizada em determinadas operações financeiras, incluindo a remuneração da poupança e a atualização de contratos previstos em lei.',
+ 'Diária', 'Banco Central do Brasil', 'https://www.bcb.gov.br'),
+('SALARIO', 'Salário Mínimo',
+ 'Menor remuneração mensal legalmente estabelecida para trabalhadores no Brasil. Seu valor é definido pelo Governo Federal e também serve como referência para diversos benefícios previdenciários e assistenciais.',
+ 'Conforme legislação', 'Governo Federal', 'https://www.gov.br'),
+('TEMPERATURA', 'Temperatura nas Capitais Brasileiras',
+ 'As temperaturas das capitais brasileiras são apresentadas em graus Celsius (°C), conforme os dados disponibilizados pelo INMET. O símbolo -- indica ausência de informação para a cidade na última atualização, podendo ocorrer por indisponibilidade da estação meteorológica ou falta de dados na fonte consultada.',
+ 'Conforme disponibilidade', 'INMET', 'https://portal.inmet.gov.br');
+-- --------------------
+INSERT INTO tb_indicador_info
+    (nm_indicador, titulo, descricao, periodicidade, fonte, url_fonte)
+VALUES
+    ('PIB',
+     'Produto Interno Bruto (PIB) Brasileiro',
+     'O Produto Interno Bruto (PIB) representa o valor dos bens e serviços finais produzidos no Brasil. O indicador apresentado corresponde à variação percentual do PIB em relação ao mesmo trimestre do ano anterior, permitindo acompanhar o crescimento ou a retração da atividade econômica brasileira.',
+     'Trimestral',
+     'IBGE',
+     'https://sidra.ibge.gov.br/tabela/5932')
+ON CONFLICT (nm_indicador) DO NOTHING;
+-- --------------------
+INSERT INTO tb_indicador_info
+    (nm_indicador, titulo, descricao, periodicidade, fonte, url_fonte)
+VALUES
+    ('POPULACAO',
+     'População Brasileira — Estimativa Anual',
+     'Apresenta a estimativa da população residente no Brasil, expressa em número de habitantes. O indicador é elaborado pelo IBGE e utiliza como referência o dia 1º de julho de cada ano. As estimativas populacionais são importantes para o planejamento de políticas públicas, estudos demográficos e análises socioeconômicas.',
+     'Anual',
+     'IBGE',
+     'https://sidra.ibge.gov.br/tabela/6579')
+ON CONFLICT (nm_indicador) DO NOTHING;
+-- -------------------
+UPDATE tb_indicador_info
+SET
+    titulo = 'Produto Interno Bruto (PIB) Brasileiro',
+    descricao = 'O Produto Interno Bruto (PIB) representa o valor dos bens e serviços finais produzidos no Brasil. O valor monetário é apresentado a preços correntes, em trilhões de reais, sem descontar os efeitos da inflação. A variação percentual representa o crescimento real do PIB em relação ao mesmo trimestre do ano anterior, conforme divulgado pelo IBGE. As informações são trimestrais e obtidas das tabelas 1846 (valores monetários) e 5932 (variação real) do SIDRA/IBGE.',
+    periodicidade = 'Trimestral',
+    fonte = 'IBGE',
+    url_fonte = 'https://sidra.ibge.gov.br/tabela/1846',
+    dt_atualizacao = CURRENT_TIMESTAMP
+WHERE nm_indicador = 'PIB';
+
+
 
 select * from tb_feriado
 where uf = 'AC'
