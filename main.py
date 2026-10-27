@@ -17,6 +17,7 @@ from indicadores.pib_variacao import Pib_Variacao
 from indicadores.pib_valores import Pib_Valores
 from indicadores.populacao import Populacao
 
+
 # Log: arquivo no diretório de trabalho do programa
 logging.basicConfig(filename="atualizador.log",
                     encoding="utf-8",

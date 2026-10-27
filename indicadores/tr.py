@@ -15,7 +15,7 @@ class Tr:
         return resposta.json()
 
     @staticmethod
-    def atualizar_tr():
+    def atualizar():
         dados = Tr.buscar(6)
         if not dados:
             return
