@@ -15,7 +15,7 @@ class Inpc:
         return resposta.json()
 
     @staticmethod
-    def atualizar_inpc():
+    def atualizar():
         dados = Inpc.buscar(6)
         if not dados:
             return

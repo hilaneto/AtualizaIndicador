@@ -42,7 +42,7 @@ class Euro(Model):
                 }
 
     @staticmethod
-    def atualizar_euro():
+    def atualizar():
         dados_api = Euro.buscar()
         euro = Euro.tratar_dados(dados_api)
         with conectar():

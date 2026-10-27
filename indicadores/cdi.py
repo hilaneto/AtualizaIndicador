@@ -15,7 +15,7 @@ class Cdi:
         return resposta.json()
 
     @staticmethod
-    def atualizar_cdi():
+    def atualizar():
         dados = Cdi.buscar(6)
         if not dados:
             return

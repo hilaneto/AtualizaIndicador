@@ -35,7 +35,7 @@ class Selic:
             for registro in dados_selic]
 
     @staticmethod
-    def atualizar_selic():
+    def atualizar():
         dados = Selic.transformar()
         if not dados:
             return

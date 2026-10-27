@@ -43,7 +43,7 @@ class Bitcoin(Model):
 
 
     @staticmethod
-    def atualizar_bitcoin():
+    def atualizar():
         dados_api = Bitcoin.buscar()
         bitcoin = Bitcoin.tratar_dados(dados_api)
         with conectar():

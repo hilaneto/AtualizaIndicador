@@ -53,7 +53,7 @@ class Dolar(Model):
         ]
 
     @staticmethod
-    def atualizar_dolar():
+    def atualizar():
         dados_api = Dolar.buscar()
         dolares = Dolar.tratar_dados(dados_api)
         with conectar():

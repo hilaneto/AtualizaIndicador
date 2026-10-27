@@ -38,23 +38,23 @@ def executar_atualizacao(nome, funcao):
         logger.info("Atualização finalizada sem exceções: %s", nome)
 
 def atualizar_seg_sex():
-    executar_atualizacao("Dólar", Dolar.atualizar_dolar)
-    executar_atualizacao("Euro", Euro.atualizar_euro)
-    executar_atualizacao("IPCA", Ipca.atualizar_ipca)
-    executar_atualizacao("INPC", Inpc.atualizar_inpc)
-    executar_atualizacao("CDI", Cdi.atualizar_cdi)
-    executar_atualizacao("TR", Tr.atualizar_tr)
-    executar_atualizacao("Selic", Selic.atualizar_selic)
-    executar_atualizacao("Igpm", Igpm.atualizar_igpm)
-    executar_atualizacao("Salário mínimo", Salario.atualizar_salario)
-    executar_atualizacao("Ibovespa", Ibovespa.atualizar_ibovespa)
+    executar_atualizacao("Dólar", Dolar.atualizar)
+    executar_atualizacao("Euro", Euro.atualizar)
+    executar_atualizacao("IPCA", Ipca.atualizar)
+    executar_atualizacao("INPC", Inpc.atualizar)
+    executar_atualizacao("CDI", Cdi.atualizar)
+    executar_atualizacao("TR", Tr.atualizar)
+    executar_atualizacao("Selic", Selic.atualizar)
+    executar_atualizacao("Igpm", Igpm.atualizar)
+    executar_atualizacao("Salário mínimo", Salario.atualizar)
+    executar_atualizacao("Ibovespa", Ibovespa.atualizar)
     
 def atualizar_24h7():
-    executar_atualizacao("Bitcoin", Bitcoin.atualizar_bitcoin)
-    executar_atualizacao("Temperatura", Temperatura.atualizar_temperatura)
+    executar_atualizacao("Bitcoin", Bitcoin.atualizar)
+    executar_atualizacao("Temperatura", Temperatura.atualizar)
 
 def atualizar_anual():
-    executar_atualizacao("Feriados", Feriado.atualizar_feriado)
+    executar_atualizacao("Feriados", Feriado.atualizar)
 
 def atualizar_ibge():
     executar_atualizacao("PIB - Variação", Pib_Variacao.atualizar)

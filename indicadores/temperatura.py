@@ -197,7 +197,7 @@ class Temperatura(Model):
     # ATUALIZAR TB_TEMPERATURA
     # ==========================================================
     @staticmethod
-    def atualizar_temperatura():
+    def atualizar():
         temperaturas = Temperatura.buscar()
         agora = datetime.now()
 

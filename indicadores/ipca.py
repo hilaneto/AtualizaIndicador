@@ -15,7 +15,7 @@ class Ipca:
         return resposta.json()
 
     @staticmethod
-    def atualizar_ipca():
+    def atualizar():
         dados = Ipca.buscar(12)
         if not dados:
             return
