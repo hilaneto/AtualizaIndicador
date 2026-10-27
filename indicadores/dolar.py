@@ -64,3 +64,44 @@ class Dolar(Model):
                         update={Dolar.valor: dolar["valor"],
                                 Dolar.status: dolar["status"],
                                 Dolar.dt_atualizacao: dolar["dt_atualizacao"]}).execute())
+
+
+    @staticmethod
+    def carregar_historico(qtd=30):
+        headers = {"x-api-key": AWESOME_API_KEY}
+        moedas = {"USD-BRL": ("USDCC", "USDCV"),
+                  "USD-BRLT": ("USDTC", "USDTV")}
+
+        registros = []
+
+        for par, (compra, venda) in moedas.items():
+            url = f"https://economia.awesomeapi.com.br/json/daily/{par}/{qtd}"
+            resposta = requests.get(url, headers=headers, timeout=30)
+            resposta.raise_for_status()
+
+            for item in resposta.json():
+                dt_referencia = datetime.fromtimestamp(int(item["timestamp"]))
+                dt_atualizacao = datetime.now()
+
+                for codigo, campo in ((compra, "bid"), (venda, "ask")):
+                    registros.append({
+                        "valor": Decimal(item[campo]),
+                        "status": True,
+                        "moeda": codigo,
+                        "dt_referencia": dt_referencia,
+                        "dt_atualizacao": dt_atualizacao
+                    })
+
+        with conectar():
+            for registro in registros:
+                (Dolar.insert(**registro)
+                    .on_conflict(
+                        conflict_constraint="uq_tb_moeda_referencia",
+                        update={
+                            Dolar.valor: registro["valor"],
+                            Dolar.status: registro["status"],
+                            Dolar.dt_atualizacao: registro["dt_atualizacao"]
+                        }
+                    ).execute())
+
+        print(f"Histórico processado: {len(registros)} registros.")                

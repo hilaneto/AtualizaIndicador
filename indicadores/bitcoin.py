@@ -41,6 +41,7 @@ class Bitcoin(Model):
                 "dt_atualizacao": datetime.now()
                 }
 
+
     @staticmethod
     def atualizar_bitcoin():
         dados_api = Bitcoin.buscar()
@@ -51,3 +52,36 @@ class Bitcoin(Model):
                     update={Bitcoin.valor: bitcoin["valor"],
                             Bitcoin.status: bitcoin["status"],
                             Bitcoin.dt_atualizacao: bitcoin["dt_atualizacao"]}).execute())
+
+
+    @staticmethod
+    def carregar_historico(qtd=30):
+        url = f"https://economia.awesomeapi.com.br/json/daily/BTC-BRL/{qtd}"
+        headers = {"x-api-key": AWESOME_API_KEY}
+
+        resposta = requests.get(url, headers=headers, timeout=30)
+        resposta.raise_for_status()
+
+        registros = []
+        for item in resposta.json():
+            registros.append({
+                "valor": Decimal(item["bid"]),
+                "status": True,
+                "moeda": "BTC",
+                "dt_referencia": datetime.fromtimestamp(int(item["timestamp"])),
+                "dt_atualizacao": datetime.now()
+            })
+
+        with conectar():
+            for registro in registros:
+                (Bitcoin.insert(**registro)
+                    .on_conflict(
+                        conflict_constraint="uq_tb_moeda_referencia",
+                        update={
+                            Bitcoin.valor: registro["valor"],
+                            Bitcoin.status: registro["status"],
+                            Bitcoin.dt_atualizacao: registro["dt_atualizacao"]
+                        }
+                    ).execute())
+
+        print(f"Histórico do Bitcoin processado: {len(registros)} registros.")            

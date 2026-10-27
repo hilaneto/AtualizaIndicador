@@ -51,3 +51,35 @@ class Euro(Model):
                     update={Euro.valor: euro["valor"],
                             Euro.status: euro["status"],
                             Euro.dt_atualizacao: euro["dt_atualizacao"]}).execute())
+
+    @staticmethod
+    def carregar_historico(qtd=30):
+        url = f"https://economia.awesomeapi.com.br/json/daily/EUR-BRL/{qtd}"
+        headers = {"x-api-key": AWESOME_API_KEY}
+
+        resposta = requests.get(url, headers=headers, timeout=30)
+        resposta.raise_for_status()
+
+        registros = []
+        for item in resposta.json():
+            registros.append({
+                "valor": Decimal(item["bid"]),
+                "status": True,
+                "moeda": "EUR",
+                "dt_referencia": datetime.fromtimestamp(int(item["timestamp"])),
+                "dt_atualizacao": datetime.now()
+            })
+
+        with conectar():
+            for registro in registros:
+                (Euro.insert(**registro)
+                    .on_conflict(
+                        conflict_constraint="uq_tb_moeda_referencia",
+                        update={
+                            Euro.valor: registro["valor"],
+                            Euro.status: registro["status"],
+                            Euro.dt_atualizacao: registro["dt_atualizacao"]
+                        }
+                    ).execute())
+
+        print(f"Histórico do Euro processado: {len(registros)} registros.")            
